@@ -1,0 +1,1791 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A6365">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sightline">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Sightline</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Sightline: a behavior observation data collection prototype for school psychologists. Fictional data only.">
+<style>
+/* Layout: app shell with a sticky header + nav; content column up to 1180px; live view is a responsive grid of target cards with large tap targets. */
+:root{
+  --bg:#F1F5F4; --surface:#FFFFFF; --sunk:#E5ECEA; --ink:#12222A; --ink-2:#47595F; --line:#C6D2CF;
+  --accent:#0A6365; --accent-2:#07484A; --accent-soft:#D2E9E7; --on-accent:#FFFFFF;
+  --mark:#8A4C00; --mark-soft:#FBE9CC; --ok:#1C6737; --ok-soft:#DAEEDF; --bad:#A0242B; --bad-soft:#F6DCDD;
+  --focus:#1F4FD6; --chart-grid:#D9E2E0;
+  --f-ui:"Atkinson Hyperlegible","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px; --tap:56px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1618; --surface:#142124; --sunk:#1B2B2F; --ink:#E3EBEA; --ink-2:#A2B3B2; --line:#2E4246;
+  --accent:#5BC1BE; --accent-2:#8BD7D4; --accent-soft:#153B3C; --on-accent:#05201F;
+  --mark:#F0B25A; --mark-soft:#3A2A12; --ok:#7ED299; --ok-soft:#163120; --bad:#F2888D; --bad-soft:#3A1C1E;
+  --focus:#93B4FF; --chart-grid:#26383C; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0D1618; --surface:#142124; --sunk:#1B2B2F; --ink:#E3EBEA; --ink-2:#A2B3B2; --line:#2E4246;
+  --accent:#5BC1BE; --accent-2:#8BD7D4; --accent-soft:#153B3C; --on-accent:#05201F;
+  --mark:#F0B25A; --mark-soft:#3A2A12; --ok:#7ED299; --ok-soft:#163120; --bad:#F2888D; --bad-soft:#3A1C1E;
+  --focus:#93B4FF; --chart-grid:#26383C; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+h1,h2,h3,h4{line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:1.6rem} h2{font-size:1.3rem} h3{font-size:1.1rem} h4{font-size:1rem}
+p{margin:0}
+a{color:var(--accent)}
+.mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;letter-spacing:.01em;color:var(--ink);text-decoration:none}
+.brand svg{flex:none}
+.proto{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mark);background:var(--mark-soft);border-radius:999px;padding:3px 10px}
+nav.tabs{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+nav.tabs a{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;border-radius:8px;color:var(--ink-2);text-decoration:none;font-weight:700}
+nav.tabs a[aria-current="page"]{background:var(--accent-soft);color:var(--accent-2)}
+nav.tabs a:hover{background:var(--sunk)}
+.livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--mark-soft);color:var(--ink);padding-block:8px;border-top:1px solid var(--line)}
+.livebar .dot{width:10px;height:10px;border-radius:50%;background:var(--mark);flex:none}
+@media (max-width:720px){nav.tabs{margin-left:0;width:100%;display:grid;grid-template-columns:repeat(5,1fr)} nav.tabs a{justify-content:center;padding:0 4px;font-size:.85rem}}
+
+main{padding-block:20px 64px;display:flex;flex-direction:column;gap:20px}
+.notice{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.notice.warn{background:var(--mark-soft);border-color:transparent}
+.notice.bad{background:var(--bad-soft);border-color:transparent}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel>header{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.sub{color:var(--ink-2)}
+.small{font-size:.875rem}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:20px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.spacer{flex:1}
+.stack{display:flex;flex-direction:column;gap:10px;min-width:0}
+
+/* forms */
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:.92rem;min-width:0}
+label.f .hint{font-weight:400;color:var(--ink-2);font-size:.85rem}
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
+  font:inherit;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:8px;min-height:46px;padding:8px 12px;width:100%}
+textarea{min-height:84px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0;min-width:0}
+legend{font-weight:700;font-size:.92rem;padding:0 4px}
+.check{display:flex;gap:10px;align-items:flex-start;min-height:40px;padding:6px 0;font-weight:400}
+.check input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--accent)}
+.fieldwarn{color:var(--bad);font-weight:700;font-size:.88rem}
+
+/* buttons */
+button,.btn{font:inherit;font-weight:700;cursor:pointer;border-radius:8px;min-height:44px;padding:8px 16px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:1.2}
+button:hover{background:var(--sunk)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+button.danger{color:var(--bad);border-color:currentColor;background:transparent}
+button.danger.solid{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+button.ghost{border-color:transparent;background:transparent;color:var(--accent)}
+button.ghost:hover{background:var(--accent-soft)}
+button.sm{min-height:36px;padding:4px 12px;font-size:.9rem}
+button[disabled]{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:9px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;border-radius:0;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+
+/* method picker */
+.methods{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:8px}
+.mopt{position:relative;display:block}
+.mopt input{position:absolute;opacity:0;inset:0}
+.mopt span{display:flex;flex-direction:column;gap:2px;border:1.5px solid var(--line);border-radius:9px;padding:10px 12px;min-height:72px;font-weight:400;font-size:.86rem;color:var(--ink-2);cursor:pointer;height:100%}
+.mopt b{color:var(--ink);font-size:.98rem}
+.mopt input:checked+span{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.mopt input:checked+span b::after{content:" ✓";color:var(--accent-2)}
+.mopt input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.8rem;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--sunk);color:var(--ink-2);white-space:nowrap}
+.chip.acc{background:var(--accent-soft);color:var(--accent-2)}
+.chip.mark{background:var(--mark-soft);color:var(--mark)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+kbd{font-family:var(--f-mono);font-size:.78rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;background:var(--surface);color:var(--ink-2)}
+
+/* tables */
+.tablewrap{position:relative;overflow-x:auto;border:1px solid var(--line);border-radius:8px;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--sunk);font-size:.82rem;letter-spacing:.03em;color:var(--ink-2)}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.voided td{color:var(--ink-2);text-decoration:line-through}
+tr.voided td.keep{text-decoration:none}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+dl.kv dt{color:var(--ink-2);font-size:.9rem} dl.kv dd{margin:0;font-weight:700;min-width:0;overflow-wrap:anywhere}
+
+/* list rows */
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.list>*{border-bottom:1px solid var(--line)} .list>*:last-child{border-bottom:0}
+.lrow{display:flex;gap:12px;align-items:center;padding:12px 14px;flex-wrap:wrap;width:100%;text-align:left;border-radius:0;border:0;background:transparent;min-height:60px;font-weight:400}
+.lrow:hover{background:var(--sunk)}
+.lrow[aria-current="true"]{background:var(--accent-soft)}
+.lrow .t{font-weight:700}
+
+/* live session */
+.livehead{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hh,64px));z-index:15;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;box-shadow:0 6px 18px -14px rgba(0,0,0,.4)}
+.clock{font-family:var(--f-mono);font-size:2.1rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.status{font-weight:700;font-size:.85rem;border-radius:999px;padding:4px 12px}
+.status.rec{background:var(--mark-soft);color:var(--mark)}
+.status.paused{background:var(--sunk);color:var(--ink-2)}
+.status.ended{background:var(--ok-soft);color:var(--ok)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px;align-items:start}
+.tcard{background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.tcard.active{border-color:var(--mark)}
+.tcard header{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.tcard h3{font-size:1.08rem}
+.tcard details summary{cursor:pointer;color:var(--ink-2);font-size:.88rem;min-height:32px;display:flex;align-items:center}
+.tcard details p{font-size:.9rem;color:var(--ink-2)}
+.big{min-height:var(--tap);font-size:1.12rem;width:100%;border-radius:10px}
+.big.count{min-height:84px;font-size:1.25rem;justify-content:space-between;padding:10px 18px}
+.big.count .n{font-family:var(--f-mono);font-size:2rem;font-weight:600}
+.big.on{background:var(--mark);border-color:var(--mark);color:var(--surface)}
+.big.on:hover{background:var(--mark);filter:brightness(1.07)}
+.btns2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.btns3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.btns2>button,.btns3>button{white-space:normal;padding-inline:8px}
+.btns2>button,.btns3>button{min-height:var(--tap)}
+button.yes{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+button.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
+.stat{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem;color:var(--ink-2)}
+.stat b{color:var(--ink);font-family:var(--f-mono);font-weight:600}
+.prog{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);width:0}
+.prompt{border-radius:10px;background:var(--mark-soft);padding:10px;display:flex;flex-direction:column;gap:8px}
+.prompt p{font-weight:700}
+
+/* interval strip */
+.strip{display:flex;flex-wrap:wrap;gap:3px}
+.cell{width:30px;height:30px;min-height:30px;padding:0;border-radius:5px;font-family:var(--f-mono);font-size:.85rem;font-weight:600;border:1.5px solid var(--line)}
+.cell.yes{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.cell.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
+.cell.un{color:var(--ink-2);background:repeating-linear-gradient(45deg,var(--sunk) 0 4px,var(--surface) 4px 8px)}
+.cell.cur{border-style:dashed;border-color:var(--mark);color:var(--mark);background:var(--surface)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);align-items:center}
+.legend .cell{width:20px;height:20px;min-height:20px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;cursor:default}
+.tasteps{display:flex;flex-direction:column;gap:8px}
+.tastep{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.levels{display:flex;flex-wrap:wrap;gap:4px}
+.levels button{min-height:40px;min-width:44px;padding:4px 8px;font-family:var(--f-mono);font-size:.85rem}
+.levels button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{min-height:36px;padding:4px 10px;font-size:.85rem;font-weight:400;border-radius:999px}
+.chips button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-2);font-weight:700}
+
+/* charts */
+.chart svg{width:100%;max-width:860px;height:auto;display:block}
+.chart text{fill:var(--ink-2);font-family:var(--f-ui)}
+
+/* dialog */
+dialog{border:0;border-radius:14px;padding:0;max-width:min(560px,calc(100vw - 24px));width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px -20px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(10,20,22,.5)}
+dialog form{padding:20px;display:flex;flex-direction:column;gap:14px;max-height:85vh;overflow:auto}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;font-weight:700;max-width:calc(100vw - 32px);opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}
+.empty{border:1.5px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;color:var(--ink-2)}
+#printArea{display:none}
+@media print{
+  #app,#toast,#dlg,body::before{display:none!important}
+  #printArea{display:block;color:#12222A;background:#fff;font:10.5pt/1.45 "Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif}
+  html,body{background:#fff!important}
+  #printArea h1{font-size:17pt;margin:0 0 2pt} #printArea h2{font-size:12.5pt;margin:14pt 0 4pt;break-after:avoid} #printArea h3{font-size:11pt;margin:10pt 0 3pt;break-after:avoid}
+  #printArea .pnote{color:#8A4C00;font-size:8.5pt;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid #C6D2CF;padding-bottom:6pt;margin-bottom:8pt}
+  #printArea p{margin:0 0 6pt} #printArea .muted{color:#47595F;font-size:9pt}
+  #printArea table{border-collapse:collapse;width:100%;margin:0 0 8pt;font-size:9pt;break-inside:auto}
+  #printArea th,#printArea td{border:1px solid #C6D2CF;padding:3pt 5pt;text-align:left;vertical-align:top}
+  #printArea thead th{background:#E5ECEA} #printArea tbody th{width:38%;font-weight:700;background:#fff}
+  #printArea tr{break-inside:avoid} #printArea svg{width:100%;max-width:640px;height:auto;break-inside:avoid}
+  #printArea .target{break-inside:auto} #printArea .foot{margin-top:14pt;border-top:1px solid #C6D2CF;padding-top:6pt;color:#47595F;font-size:8pt}
+  @page{size:letter;margin:0.6in}
+}
+details.hist summary{cursor:pointer;color:var(--accent);font-size:.82rem}
+details.hist ul{margin:4px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink-2)}
+.srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.copybox{width:100%;min-height:150px;font-family:var(--f-ui)}
+</style>
+
+<div id="app">
+  <header class="top" id="topHeader">
+    <div class="wrap topbar">
+      <a class="brand" href="#observe" aria-label="Sightline home">
+        <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="8" fill="var(--accent)"/><path d="M6 15c2.6-4.4 5.6-6.6 9-6.6s6.4 2.2 9 6.6c-2.6 4.4-5.6 6.6-9 6.6S8.6 19.4 6 15z" fill="none" stroke="var(--on-accent)" stroke-width="2"/><circle cx="15" cy="15" r="2.8" fill="var(--on-accent)"/></svg>
+        Sightline
+      </a>
+      <span class="proto" title="Prototype for testing with fictional students only">Prototype · fictional data</span>
+      <nav class="tabs" aria-label="Main">
+        <a href="#observe" data-nav="observe">Observe</a>
+        <a href="#students" data-nav="students">Students</a>
+        <a href="#sessions" data-nav="sessions">Sessions</a>
+        <a href="#graphs" data-nav="graphs">Graphs</a>
+        <a href="#about" data-nav="about">About</a>
+      </nav>
+    </div>
+    <div id="liveBar" hidden></div>
+  </header>
+  <main id="main" class="wrap" tabindex="-1"><div class="notice warn" style="flex-direction:column;gap:8px"><b>Sightline is not running.</b><span>This page was opened by a viewer that shows it without running the app. That happens with file previews, such as tapping the file in the iPhone or iPad Files app.</span><span>On iPhone or iPad, open Sightline from a web link in Safari instead. On a laptop or Chromebook, open the file in Chrome, Edge, Safari or Firefox.</span></div></main>
+</div>
+<dialog id="dlg" aria-labelledby="dlgTitle"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   Sightline — behavior observation prototype
+   All data stays in this browser (localStorage). Fictional students only.
+   ===================================================================== */
+
+const STORE_KEY = 'sightline.v1';
+
+/* ---------- small utilities ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = (p = 'id') => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const sum = a => a.reduce((x, y) => x + y, 0);
+function fmtClock(ms){ ms = Math.max(0, ms || 0); const s = Math.floor(ms/1000); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return h ? `${h}:${pad(m)}:${pad(x)}` : `${pad(m)}:${pad(x)}`; }
+function fmtDur(ms){ const s = Math.round((ms||0)/1000); const m = Math.floor(s/60); return m ? `${m} min ${pad(s%60)} s` : `${s} s`; }
+function fmtNum(v, d = 1){ return (v == null || !isFinite(v)) ? '—' : (Math.round(v * 10**d) / 10**d).toFixed(d); }
+function fmtPct(n, d){ return d > 0 ? fmtNum(n/d*100, 1) + '%' : '—'; }
+function todayISO(d = new Date()){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function nowHM(){ const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDate(iso, short){ if(!iso) return '—'; const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString(undefined, short ? {month:'short', day:'numeric'} : {month:'short', day:'numeric', year:'numeric'}); }
+function fmtWall(ms){ return new Date(ms).toLocaleTimeString([], {hour:'numeric', minute:'2-digit', second:'2-digit'}); }
+function fmtTime12(hm){ if(!hm) return '—'; const [h,m] = hm.split(':').map(Number); const d = new Date(); d.setHours(h, m); return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+function parseClock(str){ // "m:ss" or "h:mm:ss" or seconds -> ms
+  if(str == null) return null; str = String(str).trim(); if(!str) return null;
+  if(/^\d+(\.\d+)?$/.test(str)) return Math.round(parseFloat(str) * 1000);
+  const p = str.split(':').map(Number); if(p.some(isNaN)) return null;
+  let s = 0; for(const v of p) s = s*60 + v; return Math.round(s*1000);
+}
+function lines(t){ return String(t || '').split(/\n|,/).map(s => s.trim()).filter(Boolean); }
+
+/* ---------- reference data ---------- */
+const METHODS = {
+  frequency:{label:'Frequency', blurb:'Tap once per occurrence. Shows count and rate per minute.', metric:'Rate', unit:'per minute', axis:'Rate (responses per minute)'},
+  duration: {label:'Duration', blurb:'Start/stop a timer for each episode. Shows total and per-episode time.', metric:'Percent of observed time', unit:'%', axis:'Duration (% of observed time)'},
+  latency:  {label:'Latency', blurb:'Mark the instruction, then the response. Handles no response and timeouts.', metric:'Mean latency', unit:'seconds', axis:'Mean latency (seconds)'},
+  partial:  {label:'Partial interval', blurb:'Score each interval if the behavior happened at any point.', metric:'Intervals with behavior', unit:'% of scored intervals', axis:'Intervals scored "occurred" (%)'},
+  whole:    {label:'Whole interval', blurb:'Score each interval only if the behavior lasted the entire interval.', metric:'Intervals with behavior throughout', unit:'% of scored intervals', axis:'Intervals scored "throughout" (%)'},
+  mts:      {label:'Momentary time sampling', blurb:'At the end of each interval, score whether the behavior is happening right then.', metric:'Intervals with behavior at the moment', unit:'% of scored intervals', axis:'Intervals scored "occurring" (%)'},
+  percent:  {label:'Percent correct', blurb:'Record correct, incorrect, and prompted trials. Shows the numerator and denominator.', metric:'Correct (independent)', unit:'% of trials', axis:'Independent correct (% of trials)'},
+  task:     {label:'Task analysis', blurb:'Score each step of a routine by prompt level, across runs.', metric:'Steps independent', unit:'% of scored steps', axis:'Steps independent (% of scored steps)'},
+  abc:      {label:'ABC narrative', blurb:'Record setting, antecedent, behavior, and consequence for each episode.', metric:'Entries', unit:'entries', axis:'ABC entries recorded (count)'}
+};
+const INTERVAL_METHODS = ['partial','whole','mts'];
+const INT_WORDS = {
+  partial:{yes:'Occurred', no:'Did not occur', q:'Did the behavior occur at any point?'},
+  whole:  {yes:'Throughout', no:'Not throughout', q:'Did the behavior last the entire interval?'},
+  mts:    {yes:'Occurring', no:'Not occurring', q:'Is the behavior happening right now?'}
+};
+const LEVELS = [
+  {k:'I', label:'Independent'}, {k:'G', label:'Gestural'}, {k:'V', label:'Verbal'}, {k:'M', label:'Model'},
+  {k:'PP', label:'Partial physical'}, {k:'FP', label:'Full physical'}, {k:'NR', label:'No response'}
+];
+const LEVEL_LABEL = Object.fromEntries(LEVELS.map(l => [l.k, l.label]));
+const DEFAULT_ANTECEDENTS = ['Task demand given','Transition','Told "no" / denied item','Peer interaction','Adult attention elsewhere','Unstructured time','Correction given'];
+const DEFAULT_CONSEQUENCES = ['Redirected','Adult attention','Peer attention','Task paused or removed','Planned ignoring','Item or activity given','Moved to another area'];
+const TEMPLATES = [
+  {name:'Off-task', method:'mts', intervalSec:15, def:'Eyes or body oriented away from the assigned task, materials, or speaker, or doing something other than the assigned task, at the moment the interval ends.'},
+  {name:'Academically engaged', method:'mts', intervalSec:15, def:'Actively or passively attending to assigned work: writing, reading, answering, raising a hand, or looking at the teacher or task materials.'},
+  {name:'Out of seat', method:'frequency', def:'Buttocks leave the seat or assigned area without permission. Each new departure after returning to the seat counts as one.'},
+  {name:'Calling out', method:'frequency', def:'Speaking or making noises audible to the teacher without being called on. Instances separated by 3 or more seconds count separately.'},
+  {name:'Disruption', method:'partial', intervalSec:10, def:'Any behavior that interrupts instruction or peers, such as loud noises, banging objects, or talking to peers during independent work.'},
+  {name:'Tantrum', method:'duration', def:'Crying, screaming, or dropping to the floor lasting 5 seconds or longer. The episode ends after 30 seconds with none of these behaviors.'},
+  {name:'Follows directions', method:'latency', timeoutSec:30, def:'Time from the end of an adult’s direction to the student beginning the requested action.'},
+  {name:'Seated work', method:'whole', intervalSec:15, def:'Seated with materials out and working on the assigned task for the entire interval.'},
+  {name:'Behavior episodes (ABC)', method:'abc', def:'Any instance of the referral behavior. Record what happened right before and right after, in observable terms.'}
+];
+
+/* ---------- storage ---------- */
+const Store = {
+  ok: true,
+  probe(){ try { localStorage.setItem(STORE_KEY + '.probe', '1'); localStorage.removeItem(STORE_KEY + '.probe'); this.ok = true; } catch(e){ this.ok = false; } },
+  load(){ try { const raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; } catch(e){ return null; } },
+  save(state){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); this.ok = true; } catch(e){ this.ok = false; } }
+};
+function emptyState(){ return {version:1, students:[], targets:[], sessions:[], ui:{filters:{student:'',target:'',setting:'',observer:'',from:'',to:''}, lastObserver:'', graph:{student:'',target:'',view:'chart'}, selStudent:''}}; }
+let S;
+function save(){ Store.save(S); }
+
+/* =====================================================================
+   Calculations (pure functions; also used by tests)
+   ===================================================================== */
+const Calc = {
+  observedMs(sess, now = Date.now()){
+    return sum(sess.segments.map(g => (g.e ?? now) - g.s));
+  },
+  events(sess, tid, type){ return sess.events.filter(e => e.targetId === tid && !e.voided && (!type || e.type === type)); },
+  intervalMap(sess, tid){
+    const m = {}; for(const e of this.events(sess, tid, 'interval')) m[e.data.index] = e.data.value; return m;
+  },
+  /* Summary for one target in one session.
+     num/den/scale: value = num / den * scale. Used for weighted aggregation across sessions. */
+  summarize(sess, tg, now = Date.now()){
+    const obs = this.observedMs(sess, now), min = obs / 60000;
+    const ev = this.events(sess, tg.id);
+    const o = {method:tg.method, obs, rows:[], num:null, den:null, scale:1, value:null, unit:METHODS[tg.method].unit, big:'—', bigLabel:''};
+    switch(tg.method){
+      case 'frequency': {
+        const n = ev.filter(e => e.type === 'count').length;
+        Object.assign(o, {num:n, den:min, value: min > 0 ? n/min : null, big:String(n), bigLabel:'count', count:n});
+        o.rows = [['Count', String(n)], ['Observed time', fmtDur(obs)],
+          ['Rate', min > 0 ? `${fmtNum(n/min, 2)} per minute (${fmtNum(n/min*60, 1)} per hour)` : '—'],
+          ['Calculation', `${n} responses ÷ ${fmtNum(min, 2)} observed minutes`]];
+        break;
+      }
+      case 'duration': {
+        const eps = ev.filter(e => e.type === 'episode').map(e => e.data.end - e.data.start);
+        const run = sess.running?.[tg.id];
+        const open = run ? Math.max(0, obs - run.t) : null;
+        const all = open != null ? [...eps, open] : eps;
+        const total = sum(all), n = all.length;
+        Object.assign(o, {num:total, den:obs, scale:100, value: obs > 0 ? total/obs*100 : null, big:fmtClock(total), bigLabel:'total', episodes:n, total, mean: n ? total/n : null});
+        o.rows = [['Episodes', `${n}${open != null ? ' (1 in progress)' : ''}`], ['Total duration', fmtDur(total)],
+          ['Mean per episode', n ? fmtDur(total/n) : '—'], ['Longest episode', n ? fmtDur(Math.max(...all)) : '—'],
+          ['Percent of observed time', obs > 0 ? fmtNum(total/obs*100, 1) + '%' : '—'],
+          ['Calculation', `${fmtDur(total)} ÷ ${fmtDur(obs)} observed`]];
+        break;
+      }
+      case 'latency': {
+        const trials = ev.filter(e => e.type === 'latency');
+        const resp = trials.filter(e => e.data.outcome === 'response');
+        const lats = resp.map(e => (e.data.response - e.data.trigger)/1000).sort((a,b) => a-b);
+        const nr = trials.filter(e => e.data.outcome === 'no_response').length;
+        const to = trials.filter(e => e.data.outcome === 'timeout').length;
+        const inc = trials.filter(e => e.data.outcome === 'incomplete').length;
+        const mean = lats.length ? sum(lats)/lats.length : null;
+        const med = lats.length ? (lats.length % 2 ? lats[(lats.length-1)/2] : (lats[lats.length/2-1] + lats[lats.length/2]) / 2) : null;
+        Object.assign(o, {num:sum(lats), den:lats.length, value:mean, big: mean == null ? '—' : fmtNum(mean, 1) + ' s', bigLabel:'mean latency', trials:trials.length, responded:lats.length, noResp:nr, timeouts:to, incomplete:inc, lats});
+        o.rows = [['Instructions (trials)', String(trials.length)], ['With a response', String(lats.length)],
+          ['No response (observer marked)', String(nr)], ['Timed out', String(to)]];
+        if(inc) o.rows.push(['Incomplete (session ended first)', String(inc)]);
+        o.rows.push(['Mean latency (responses only)', mean == null ? '—' : fmtNum(mean, 1) + ' s'],
+          ['Median latency', med == null ? '—' : fmtNum(med, 1) + ' s'],
+          ['Range', lats.length ? `${fmtNum(lats[0],1)}–${fmtNum(lats[lats.length-1],1)} s` : '—'],
+          ['Calculation', lats.length ? `${fmtNum(sum(lats),1)} s ÷ ${lats.length} responses. Trials without a response are reported separately, not averaged in.` : 'No responses yet']);
+        break;
+      }
+      case 'partial': case 'whole': case 'mts': {
+        const L = (tg.config.intervalSec || 10) * 1000;
+        const completed = Math.floor(obs / L);
+        const map = this.intervalMap(sess, tg.id);
+        const idxs = Object.keys(map).map(Number);
+        const total = Math.max(completed, idxs.length ? Math.max(...idxs) + 1 : 0);
+        let yes = 0, no = 0;
+        for(let i = 0; i < total; i++){ if(map[i] === 'yes') yes++; else if(map[i] === 'no') no++; }
+        const scored = yes + no, unscored = total - scored;
+        const w = INT_WORDS[tg.method];
+        const cells = []; for(let i = 0; i < total; i++) cells.push(map[i] || null);
+        Object.assign(o, {num:yes, den:scored, scale:100, value: scored ? yes/scored*100 : null, big: scored ? fmtNum(yes/scored*100, 0) + '%' : '—', bigLabel:'of scored intervals', yes, no, scored, unscored, total, completed, cells, L});
+        o.rows = [['Interval length', `${L/1000} s`], ['Intervals in session', String(total)],
+          ['Scored', String(scored)], [`Scored "${w.yes}"`, String(yes)], [`Scored "${w.no}"`, String(no)],
+          ['Not scored (excluded, not counted as absent)', String(unscored)],
+          ['Percent', scored ? `${yes} ÷ ${scored} scored = ${fmtNum(yes/scored*100, 1)}%` : '—']];
+        break;
+      }
+      case 'percent': {
+        const t = ev.filter(e => e.type === 'trial');
+        const c = t.filter(e => e.data.result === 'correct').length, p = t.filter(e => e.data.result === 'prompted').length, i = t.filter(e => e.data.result === 'incorrect').length;
+        const n = c + p + i;
+        Object.assign(o, {num:c, den:n, scale:100, value: n ? c/n*100 : null, big: n ? fmtNum(c/n*100, 0) + '%' : '—', bigLabel:`${c} of ${n} correct`, c, p, i, n});
+        o.rows = [['Correct (independent)', String(c)], ['Correct with prompt', String(p)], ['Incorrect', String(i)], ['Total trials', String(n)],
+          ['Percent correct (independent)', n ? `${c} ÷ ${n} = ${fmtNum(c/n*100, 1)}%` : '—'],
+          ['Percent correct including prompted', n ? `${c+p} ÷ ${n} = ${fmtNum((c+p)/n*100, 1)}%` : '—']];
+        break;
+      }
+      case 'task': {
+        const steps = tg.config.steps || [];
+        const runs = ev.filter(e => e.type === 'ta_run').map(e => e.data.scores);
+        if(sess.taRun?.[tg.id]) runs.push(sess.taRun[tg.id].scores);
+        let indep = 0, scored = 0;
+        for(const r of runs) for(const s of r){ if(s){ scored++; if(s === 'I') indep++; } }
+        const byStep = steps.map((name, i) => { const sc = runs.map(r => r[i]).filter(Boolean); return {name, scored:sc.length, indep:sc.filter(s => s === 'I').length, levels:sc}; });
+        Object.assign(o, {num:indep, den:scored, scale:100, value: scored ? indep/scored*100 : null, big: scored ? fmtNum(indep/scored*100, 0) + '%' : '—', bigLabel:'steps independent', runs:runs.length, indep, scored, byStep});
+        o.rows = [['Runs', String(runs.length)], ['Steps scored', String(scored)], ['Independent steps', String(indep)],
+          ['Percent independent', scored ? `${indep} ÷ ${scored} scored steps = ${fmtNum(indep/scored*100, 1)}%` : '—']];
+        break;
+      }
+      case 'abc': {
+        const n = ev.filter(e => e.type === 'abc').length;
+        Object.assign(o, {num:n, den:1, value:n, big:String(n), bigLabel:'entries', count:n});
+        o.rows = [['ABC entries', String(n)], ['Observed time', fmtDur(obs)]];
+        break;
+      }
+    }
+    return o;
+  },
+  /* Weighted aggregate across sessions: sum numerators / sum denominators (never averages percentages). */
+  aggregate(tg, sessions){
+    let num = 0, den = 0, n = 0;
+    for(const s of sessions){ if(!s.targetIds.includes(tg.id)) continue; const r = this.summarize(s, tg); if(r.den > 0){ num += r.num; den += r.den; n++; } }
+    if(tg.method === 'abc') return {num, den:n, value: n ? num/n : null, sessions:n, note:`${num} entries across ${n} sessions (${n ? fmtNum(num/n,1) : '—'} per session)`};
+    const scale = this.summarize({segments:[], events:[]}, tg).scale;
+    const value = den > 0 ? num/den*scale : null;
+    let note;
+    switch(tg.method){
+      case 'frequency': note = `${num} responses ÷ ${fmtNum(den,1)} observed minutes`; break;
+      case 'duration': note = `${fmtDur(num)} ÷ ${fmtDur(den)} observed`; break;
+      case 'latency': note = `${fmtNum(num,1)} s ÷ ${den} responses (pooled)`; break;
+      default: note = `${num} ÷ ${den} pooled`;
+    }
+    return {num, den, value, sessions:n, note};
+  }
+};
+
+/* =====================================================================
+   Demo data (fictional)
+   ===================================================================== */
+function rng(seed){ return () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296; }
+function seedDemo(st){
+  const R = rng(20261022);
+  const sA = {id:'stu_demo1', code:'DEMO-01', grade:'4', notes:'Fictional demo student. Every recording method has a sample target.', demo:true};
+  const sB = {id:'stu_demo2', code:'DEMO-02', grade:'7', notes:'Fictional demo student.', demo:true};
+  st.students.push(sA, sB);
+  const T = (id, sid, name, method, def, config = {}, goal = {}) => ({id, studentId:sid, name, method, definition:def, config, goal, demo:true, archived:false});
+  const tg = [
+    T('tg_d1','stu_demo1','Out of seat','frequency', TEMPLATES[2].def, {}, {value:0.1, text:'0.1 or fewer per minute'}),
+    T('tg_d2','stu_demo1','Tantrum','duration', TEMPLATES[5].def, {}, {value:5, text:'Under 5% of observed time'}),
+    T('tg_d3','stu_demo1','Follows first direction','latency', TEMPLATES[6].def, {timeoutSec:30}, {value:10, text:'Begins within 10 s'}),
+    T('tg_d4','stu_demo1','Off-task','mts', TEMPLATES[0].def, {intervalSec:15, cue:true}, {value:20, text:'20% of intervals or fewer'}),
+    T('tg_d5','stu_demo1','Disruption','partial', TEMPLATES[4].def, {intervalSec:10, cue:true}),
+    T('tg_d6','stu_demo1','Seated work','whole', TEMPLATES[7].def, {intervalSec:15, cue:true}, {value:70, text:'70% of intervals'}),
+    T('tg_d7','stu_demo1','Sight-word reading','percent','Reads the presented sight word aloud correctly within 3 seconds.', {allowPrompted:true}, {value:80, text:'80% independent across 3 sessions'}),
+    T('tg_d8','stu_demo1','Morning arrival routine','task','Completes the posted arrival routine in order.', {steps:['Hang up backpack','Put folder in bin','Sharpen pencil','Sit at desk','Start morning work']}, {value:80, text:'80% of steps independent'}),
+    T('tg_d9','stu_demo1','Disruption episodes (ABC)','abc', TEMPLATES[8].def, {antecedents:DEFAULT_ANTECEDENTS, consequences:DEFAULT_CONSEQUENCES}),
+    T('tg_d10','stu_demo2','Calling out','frequency', TEMPLATES[3].def),
+    T('tg_d11','stu_demo2','Academically engaged','mts', TEMPLATES[1].def, {intervalSec:15, cue:true})
+  ];
+  st.targets.push(...tg);
+  const settings = ['Math – whole group','Reading – small group','Science – independent work'];
+  const observers = ['KM (school psychologist)','DT (RBT)'];
+  const today = new Date();
+  const abcSamples = [
+    ['Math – whole group','Task demand given','Pushed worksheet off desk and said "I’m not doing this"','Redirected'],
+    ['Math – whole group','Transition','Ran to the door and did not line up','Adult attention'],
+    ['Reading – small group','Peer interaction','Called a peer’s answer "wrong" loudly','Peer attention'],
+    ['Science – independent work','Adult attention elsewhere','Tapped pencil loudly on the desk for about 20 s','Planned ignoring'],
+    ['Math – whole group','Correction given','Put head down and covered ears','Task paused or removed']
+  ];
+  for(let k = 0; k < 6; k++){
+    const d = new Date(today); d.setDate(d.getDate() - (36 - k*6));
+    const date = todayISO(d); const startHM = k % 2 ? '10:40' : '09:15';
+    const [hh, mm] = startHM.split(':').map(Number); const startWall = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm).getTime();
+    const obs = (k === 3 ? 15 : 20) * 60000;
+    const pauseAt = k === 2 ? 8*60000 : null, pauseLen = 3*60000;
+    const segs = pauseAt ? [{s:startWall, e:startWall + pauseAt}, {s:startWall + pauseAt + pauseLen, e:startWall + obs + pauseLen}] : [{s:startWall, e:startWall + obs}];
+    const wallOf = t => startWall + t + (pauseAt && t > pauseAt ? pauseLen : 0);
+    const ids = ['tg_d1','tg_d4','tg_d9','tg_d7'];
+    if(k !== 1) ids.push('tg_d2','tg_d3','tg_d6');
+    if(k >= 2) ids.push('tg_d5','tg_d8');
+    const sess = {id:'ses_demo1_' + k, studentId:'stu_demo1', setting:settings[k % 3], observer:observers[k % 2], date, startTime:startHM, targetIds:ids,
+      status:'ended', segments:segs, events:[], notes: k === 0 ? 'Baseline observation. Substitute teacher in the room for the first 5 minutes.' : (k === 2 ? 'Paused 3 minutes for a fire-drill announcement.' : ''),
+      running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], demo:true, createdAt:startWall, endedAt:startWall + obs};
+    const add = (tid, type, t, data, extra = {}) => sess.events.push({id:uid('ev'), targetId:tid, type, t, wall:wallOf(t), data, voided:false, history:[], ...extra});
+    // frequency: trend downward
+    const nf = Math.max(1, Math.round(11 - k*1.6 + (R() - .5) * 2));
+    for(let i = 0; i < nf; i++) add('tg_d1', 'count', Math.floor(R() * obs), {});
+    if(k === 4){ // an accidental tap that was undone, showing edit history
+      const t = Math.floor(obs * .4); add('tg_d1', 'count', t, {}, {voided:true, history:[{at:wallOf(t) + 2000, action:'voided', reason:'Undone during session (double tap)'}]});
+    }
+    if(ids.includes('tg_d2')){
+      const ne = Math.max(0, 4 - Math.floor(k/1.5));
+      let cur = 60000;
+      for(let i = 0; i < ne; i++){ const len = Math.round((90 - k*12 + R()*40) * 1000); const st0 = cur + Math.floor(R() * 120000); if(st0 + len > obs) break; add('tg_d2','episode', st0, {start:st0, end:st0 + len}); cur = st0 + len + 30000; }
+    }
+    if(ids.includes('tg_d3')){
+      for(let i = 0; i < 6; i++){
+        const trig = 60000 + i * 150000 + Math.floor(R() * 30000);
+        if(k === 0 && i === 2){ add('tg_d3','latency', trig, {trigger:trig, response:null, outcome:'timeout'}); continue; }
+        if(k === 1 && i === 4){ add('tg_d3','latency', trig, {trigger:trig, response:null, outcome:'no_response'}); continue; }
+        const lat = Math.round((22 - k*3.2 + R()*6) * 1000);
+        add('tg_d3','latency', trig, {trigger:trig, response:trig + Math.max(1500, lat), outcome:'response'});
+      }
+    }
+    const scoreIntervals = (tid, sec, p) => {
+      const n = Math.floor(obs / (sec*1000));
+      for(let i = 0; i < n; i++){
+        if((k === 1 || k === 4) && (i === 7 || i === 8 || i === 30)) continue; // left unscored on purpose
+        add(tid, 'interval', (i+1) * sec * 1000, {index:i, value: R() < p ? 'yes' : 'no'});
+      }
+    };
+    scoreIntervals('tg_d4', 15, .62 - k*.08);
+    if(ids.includes('tg_d5')) scoreIntervals('tg_d5', 10, .45 - k*.05);
+    if(ids.includes('tg_d6')) scoreIntervals('tg_d6', 15, .35 + k*.08);
+    // percent correct
+    for(let i = 0; i < 20; i++){ const r = R(); const pc = .45 + k*.08; add('tg_d7','trial', 30000 + i*20000, {result: r < pc ? 'correct' : (r < pc + .15 ? 'prompted' : 'incorrect')}); }
+    // task analysis
+    if(ids.includes('tg_d8')){
+      for(let run = 0; run < 2; run++){
+        const scores = [0,1,2,3,4].map(() => { const r = R() + k*.08; return r > .85 ? 'I' : r > .65 ? 'G' : r > .45 ? 'V' : r > .3 ? 'M' : 'PP'; });
+        add('tg_d8','ta_run', 20000 + run * 300000, {scores, steps:tg[7].config.steps.slice()});
+      }
+    }
+    // ABC
+    const nAbc = k < 3 ? 3 : (k < 5 ? 2 : 1);
+    for(let i = 0; i < nAbc; i++){ const a = abcSamples[(k + i) % abcSamples.length]; add('tg_d9','abc', 90000 + i*300000, {context:sess.setting, antecedent:a[1], behavior:a[2], consequence:a[3], notes:''}); }
+    sess.events.sort((a,b) => a.t - b.t);
+    st.sessions.push(sess);
+  }
+  // DEMO-02: two short sessions
+  for(let k = 0; k < 2; k++){
+    const d = new Date(today); d.setDate(d.getDate() - (10 - k*7));
+    const startWall = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 13, 5).getTime(); const obs = 10*60000;
+    const sess = {id:'ses_demo2_' + k, studentId:'stu_demo2', setting:'ELA – whole group', observer:'KM (school psychologist)', date:todayISO(d), startTime:'13:05', targetIds:['tg_d10','tg_d11'],
+      status:'ended', segments:[{s:startWall, e:startWall + obs}], events:[], notes:'', running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], demo:true, createdAt:startWall, endedAt:startWall + obs};
+    const n = 9 - k*3; for(let i = 0; i < n; i++){ const t = Math.floor(R()*obs); sess.events.push({id:uid('ev'), targetId:'tg_d10', type:'count', t, wall:startWall + t, data:{}, voided:false, history:[]}); }
+    for(let i = 0; i < 40; i++) sess.events.push({id:uid('ev'), targetId:'tg_d11', type:'interval', t:(i+1)*15000, wall:startWall + (i+1)*15000, data:{index:i, value: R() < .55 + k*.15 ? 'yes' : 'no'}, voided:false, history:[]});
+    sess.events.sort((a,b) => a.t - b.t);
+    st.sessions.push(sess);
+  }
+  return st;
+}
+
+/* =====================================================================
+   App state helpers
+   ===================================================================== */
+const stuById = id => S.students.find(s => s.id === id);
+const tgById = id => S.targets.find(t => t.id === id);
+const sesById = id => S.sessions.find(s => s.id === id);
+const liveSession = () => S.sessions.find(s => s.status === 'active' || s.status === 'paused');
+const targetsFor = sid => S.targets.filter(t => t.studentId === sid && !t.archived);
+const sortedSessions = list => list.slice().sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
+
+function nameLikeWarning(code){
+  const c = String(code || '').trim();
+  if(!c) return '';
+  if(/^[A-Z][a-z]{1,}\s+[A-Z][a-z]{1,}/.test(c) || /^[A-Z][a-z]+,\s*[A-Z]/.test(c)) return 'This looks like it could be a real name. Use a practitioner-assigned code (for example, KM-04) instead.';
+  if(/\b\d{6,}\b/.test(c)) return 'Long number strings can be student ID numbers. Use a code that is not a district identifier.';
+  if(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(c)) return 'This looks like a date (such as a birth date). Leave dates out of student codes.';
+  return '';
+}
+
+/* ---------- toast / dialog ---------- */
+let toastTimer;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
+let dlgHandler = null;
+function openDialog({title, body, actions, onSubmit, onOpen}){
+  const d = $('#dlg');
+  d.innerHTML = `<form method="dialog" id="dlgForm" novalidate><h2 id="dlgTitle">${esc(title)}</h2>${body}<div class="row end">${actions.map((a, i) => `<button type="${a.submit ? 'submit' : 'button'}" class="${a.kind || ''}" data-dlg="${i}" ${a.id ? `id="${a.id}"` : ''}>${esc(a.label)}</button>`).join('')}</div></form>`;
+  dlgHandler = {actions, onSubmit};
+  d.showModal();
+  onOpen && onOpen(d);
+  const first = d.querySelector('input,select,textarea') || d.querySelector('button[data-dlg]');
+  first && first.focus();
+}
+function closeDialog(){ const d = $('#dlg'); if(d.open) d.close(); dlgHandler = null; }
+$('#dlg').addEventListener('click', e => {
+  const b = e.target.closest('[data-dlg]'); if(!b || !dlgHandler) return;
+  const a = dlgHandler.actions[+b.dataset.dlg]; if(a.submit) return;
+  e.preventDefault(); if(a.onClick){ if(a.onClick() === false) return; } closeDialog();
+});
+$('#dlg').addEventListener('submit', e => {
+  e.preventDefault(); if(!dlgHandler) return;
+  const res = dlgHandler.onSubmit ? dlgHandler.onSubmit(new FormData(e.target)) : true;
+  if(res !== false) closeDialog();
+});
+function confirmDialog(title, message, confirmLabel, onConfirm, danger = true){
+  openDialog({title, body:`<p>${message}</p>`, actions:[{label:'Cancel'}, {label:confirmLabel, kind: danger ? 'danger solid' : 'primary', onClick:onConfirm, id:'dlgConfirm'}]});
+  $('#dlgConfirm').focus();
+}
+
+/* ---------- file output (works inside claude.ai viewer and standalone) ---------- */
+let downloadsNs = null;
+const isViewer = () => !!(window.claude && typeof window.claude.use === 'function');
+setTimeout(() => { if(isViewer()) window.claude.use('downloads').then(d => { downloadsNs = d; }).catch(() => {}); }, 0);
+async function saveFile(filename, data, mime){
+  if(isViewer()){
+    if(!downloadsNs){ try { downloadsNs = await window.claude.use('downloads'); } catch(e){} }
+    if(downloadsNs){
+      try { await downloadsNs.save({filename, data}); toast('Saved ' + filename); }
+      catch(e){ if(e && e.code === 'declined') toast('Download cancelled'); else if(typeof data === 'string') showCopy(filename, data); else toast('Downloads are not available in this view.'); }
+      return;
+    }
+    if(typeof data === 'string'){ showCopy(filename, data); return; }
+    toast('Downloads are not available in this view. Open the standalone file to export PDFs.'); return;
+  }
+  const blob = data instanceof Blob ? data : new Blob([data], {type:mime});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Downloaded ' + filename);
+}
+function showCopy(filename, text){
+  openDialog({title:'Copy ' + filename, body:`<p class="sub small">Downloads are not available here, so the file contents are below. Copy them into a spreadsheet or text file.</p><textarea class="copybox mono" id="copyText" readonly>${esc(text)}</textarea>`,
+    actions:[{label:'Close'}, {label:'Copy', kind:'primary', onClick:() => { copyText(text, $('#copyText')); return false; }}]});
+}
+function copyText(text, fallbackEl){
+  const done = () => toast('Copied to clipboard');
+  try { navigator.clipboard.writeText(text).then(done, () => { if(fallbackEl){ fallbackEl.focus(); fallbackEl.select(); toast('Press Ctrl+C (or ⌘C) to copy'); } }); }
+  catch(e){ if(fallbackEl){ fallbackEl.focus(); fallbackEl.select(); toast('Press Ctrl+C (or ⌘C) to copy'); } }
+}
+
+/* ---------- audio cue + wake lock ---------- */
+let audioCtx = null, wakeLock = null;
+function cue(){
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = 880; g.gain.setValueAtTime(0.0001, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.18, audioCtx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.25);
+    o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.3); } catch(e){}
+  try { navigator.vibrate && navigator.vibrate(120); } catch(e){}
+}
+async function keepAwake(on){
+  try { if(on && 'wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+        if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; } } catch(e){ wakeLock = null; }
+}
+
+/* =====================================================================
+   Routing + render
+   ===================================================================== */
+let route = {view:'observe', id:null};
+function parseHash(){
+  const h = (location.hash || '').replace('#', '');
+  const views = ['observe','students','sessions','graphs','about','live'];
+  if(views.includes(h)) return {view:h, id:null};
+  return {view: liveSession() ? 'live' : 'observe', id:null};
+}
+function go(view, id = null){ route = {view, id}; if(['observe','students','sessions','graphs','about','live'].includes(view)){ try { history.replaceState(null, '', '#' + view); } catch(e){} } render(); $('#main').focus({preventScroll:true}); window.scrollTo(0, 0); }
+window.addEventListener('hashchange', () => { route = parseHash(); render(); });
+
+function render(){
+  const active = document.activeElement; const fid = active && active.id && active !== document.body ? active.id : null;
+  let sel = null; try { if(active && /^(INPUT|TEXTAREA)$/.test(active.tagName) && active.selectionStart != null) sel = [active.selectionStart, active.selectionEnd]; } catch(e){}
+  const navKey = route.view === 'session' ? 'sessions' : route.view === 'live' ? 'observe' : route.view;
+  $$('nav.tabs a').forEach(a => a.setAttribute('aria-current', a.dataset.nav === navKey ? 'page' : 'false'));
+  renderLiveBar();
+  const m = $('#main');
+  let html = '';
+  if(!Store.ok) html += `<div class="notice bad" role="alert"><div><b>Browser storage is unavailable.</b> Data in this window will be lost when the page reloads. Export a backup from Sessions before closing.</div></div>`;
+  switch(route.view){
+    case 'live': html += viewLive(); break;
+    case 'students': html += viewStudents(); break;
+    case 'sessions': html += viewSessions(); break;
+    case 'session': html += viewSession(route.id); break;
+    case 'graphs': html += viewGraphs(); break;
+    case 'about': html += viewAbout(); break;
+    default: html += viewObserve();
+  }
+  m.innerHTML = html;
+  document.documentElement.style.setProperty('--hh', $('#topHeader').offsetHeight + 'px');
+  if(fid){ const el = document.getElementById(fid); if(el){ el.focus({preventScroll:true}); if(sel){ try { el.setSelectionRange(sel[0], sel[1]); } catch(e){} } } }
+  if(route.view === 'live') tick(true);
+}
+function renderLiveBar(){
+  const lb = $('#liveBar'); const ls = liveSession();
+  if(!ls || route.view === 'live'){ lb.hidden = true; lb.innerHTML = ''; return; }
+  const st = stuById(ls.studentId);
+  lb.hidden = false;
+  lb.innerHTML = `<div class="wrap livebar"><span class="dot" aria-hidden="true"></span><span><b>${ls.status === 'paused' ? 'Paused' : 'Recording'}:</b> ${esc(st?.code)} · ${esc(ls.setting)} · <span class="mono" data-clock>${fmtClock(Calc.observedMs(ls))}</span></span><span class="spacer"></span><button class="sm primary" data-act="goLive">Return to observation</button></div>`;
+}
+
+/* =====================================================================
+   View: Observe (quick + planned start)
+   ===================================================================== */
+let quickTpl = 0;
+function viewObserve(){
+  const ls = liveSession();
+  const studs = S.students;
+  const tpl = TEMPLATES[quickTpl];
+  const lastObs = S.ui.lastObserver || '';
+  const settings = [...new Set(S.sessions.map(s => s.setting).filter(Boolean))];
+  const observers = [...new Set(S.sessions.map(s => s.observer).filter(Boolean))];
+  const plannedStu = S.ui.planStudent || (studs[0] && studs[0].id) || '';
+  const pts = plannedStu ? targetsFor(plannedStu) : [];
+  return `
+  ${ls ? `<div class="notice warn"><div class="stack" style="gap:6px"><b>An observation is in progress for ${esc(stuById(ls.studentId)?.code)}.</b><span>Finish or end it before starting another.</span><div><button class="primary" data-act="goLive">Return to observation</button></div></div></div>` : ''}
+  <section class="stack" style="gap:4px">
+    <h1>Start an observation</h1>
+    <p class="sub">Use the quick path for a single behavior, or plan a session with several targets. Use student codes only, never names.</p>
+  </section>
+  <datalist id="dlSettings">${settings.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+  <datalist id="dlObservers">${observers.map(s => `<option value="${esc(s)}">`).join('')}</datalist>
+  <div class="grid2">
+    <form class="panel" data-form="quick" aria-labelledby="qTitle">
+      <header><h2 id="qTitle">Quick observation</h2><span class="chip acc">Under a minute</span></header>
+      <div class="fields">
+        <label class="f">Student code
+          <input type="text" id="qCode" name="code" list="dlCodes" autocomplete="off" required placeholder="e.g. KM-04" value="${esc(S.ui.quickCode || '')}" data-namecheck="qWarn">
+          <span class="hint">Pick an existing code or type a new one.</span>
+          <span class="fieldwarn" id="qWarn" role="alert"></span>
+        </label>
+        <label class="f">Setting
+          <input type="text" id="qSetting" name="setting" list="dlSettings" placeholder="e.g. Math – whole group" required>
+        </label>
+      </div>
+      <datalist id="dlCodes">${studs.map(s => `<option value="${esc(s.code)}">`).join('')}</datalist>
+      <fieldset><legend>Start from a common behavior</legend>
+        <div class="chips" role="group" aria-label="Behavior templates">
+          ${TEMPLATES.map((t, i) => `<button type="button" data-act="quickTpl" data-i="${i}" aria-pressed="${i === quickTpl}">${esc(t.name)}</button>`).join('')}
+        </div>
+      </fieldset>
+      <label class="f">Behavior name<input type="text" id="qName" name="name" required value="${esc(tpl.name)}"></label>
+      <label class="f">Operational definition <span class="hint">Observable and measurable. Edit the template to fit this student.</span>
+        <textarea id="qDef" name="definition" required>${esc(tpl.def)}</textarea></label>
+      <label class="f">Recording method
+        <select id="qMethod" name="method">${Object.entries(METHODS).filter(([k]) => k !== 'task').map(([k, m]) => `<option value="${k}" ${k === tpl.method ? 'selected' : ''}>${m.label}</option>`).join('')}</select>
+        <span class="hint">Task analysis needs step setup, so add it from Students.</span></label>
+      <div class="fields">
+        <label class="f">Interval length (s) <span class="hint">Interval methods only</span><input type="number" id="qInt" name="intervalSec" min="3" max="600" value="${tpl.intervalSec || 10}"></label>
+        <label class="f">Observer<input type="text" id="qObs" name="observer" list="dlObservers" value="${esc(lastObs)}" placeholder="Initials and role"></label>
+      </div>
+      <button class="primary big" type="submit" id="qStart">Start observing</button>
+    </form>
+
+    <form class="panel" data-form="plan" aria-labelledby="pTitle">
+      <header><h2 id="pTitle">Planned session</h2><button type="button" class="ghost sm" data-act="planDemo">Fill with demo student</button></header>
+      ${studs.length ? `
+      <label class="f">Student
+        <select id="pStudent" name="studentId" data-act-change="planStudent">${studs.map(s => `<option value="${s.id}" ${s.id === plannedStu ? 'selected' : ''}>${esc(s.code)}${s.demo ? ' (demo)' : ''}</option>`).join('')}</select></label>
+      <fieldset><legend>Targets to record</legend>
+        ${pts.length ? pts.map(t => `<label class="check"><input type="checkbox" name="targets" value="${t.id}" id="pt_${t.id}" checked><span><b>${esc(t.name)}</b> <span class="chip">${METHODS[t.method].label}</span></span></label>`).join('')
+          : `<p class="sub">This student has no targets yet. <button type="button" class="ghost sm" data-act="goStudents">Add targets</button></p>`}
+      </fieldset>
+      <div class="fields">
+        <label class="f">Setting<input type="text" id="pSetting" name="setting" list="dlSettings" required placeholder="e.g. Reading – small group" value="${esc(S.ui.planSetting || '')}"></label>
+        <label class="f">Observer<input type="text" id="pObs" name="observer" list="dlObservers" value="${esc(lastObs)}" placeholder="Initials and role"></label>
+        <label class="f">Date<input type="date" id="pDate" name="date" value="${todayISO()}" required></label>
+        <label class="f">Start time<input type="time" id="pTime" name="time" value="${nowHM()}" required></label>
+      </div>
+      <button class="primary big" type="submit" id="pStart">Start session</button>` : `<div class="empty">No students yet. Add one in Students, or use the quick path.</div>`}
+    </form>
+  </div>`;
+}
+
+/* =====================================================================
+   Session lifecycle
+   ===================================================================== */
+function newSession({studentId, setting, observer, date, startTime, targetIds}){
+  const now = Date.now();
+  const sess = {id:uid('ses'), studentId, setting, observer, date, startTime, targetIds, status:'active', segments:[{s:now, e:null}], events:[], notes:'',
+    running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], createdAt:now, endedAt:null};
+  S.sessions.push(sess); S.ui.lastObserver = observer || S.ui.lastObserver; save();
+  lastCompleted = {}; undoStack = [];
+  keepAwake(true); cue(); // cue() here unlocks audio on iOS via user gesture
+  go('live');
+}
+function pauseSession(sess){ if(sess.status !== 'active') return; const now = Date.now(); sess.segments[sess.segments.length-1].e = now; sess.status = 'paused'; save(); keepAwake(false); render(); toast('Paused. Timers are stopped.'); }
+function resumeSession(sess){ if(sess.status !== 'paused') return; sess.segments.push({s:Date.now(), e:null}); sess.status = 'active'; save(); keepAwake(true); render(); toast('Resumed'); }
+function endSession(sess){
+  const now = Date.now();
+  if(sess.status === 'active') sess.segments[sess.segments.length-1].e = now;
+  const obs = Calc.observedMs(sess, now);
+  for(const [tid, r] of Object.entries(sess.running || {})) sess.events.push(mkEvent(tid, 'episode', r.t, {start:r.t, end:obs, endedBy:'session end'}, r.wall));
+  for(const [tid, p] of Object.entries(sess.latencyPending || {})) sess.events.push(mkEvent(tid, 'latency', p.t, {trigger:p.t, response:null, outcome:'incomplete'}, p.wall));
+  for(const [tid, r] of Object.entries(sess.taRun || {})) if(r.scores.some(Boolean)) sess.events.push(mkEvent(tid, 'ta_run', r.t, {scores:r.scores, steps:(tgById(tid).config.steps || []).slice()}, r.wall));
+  for(const [tid, a] of Object.entries(sess.abcDraft || {})) if(a.antecedent || a.behavior || a.consequence) sess.events.push(mkEvent(tid, 'abc', a.t, {context:a.context, antecedent:a.antecedent, behavior:a.behavior, consequence:a.consequence, notes:a.notes}, a.wall));
+  sess.running = {}; sess.latencyPending = {}; sess.taRun = {}; sess.abcDraft = {};
+  sess.status = 'ended'; sess.endedAt = now; sess.events.sort((a,b) => a.t - b.t);
+  save(); keepAwake(false); undoStack = [];
+  go('session', sess.id); toast('Observation ended. Review and edit below.');
+}
+function mkEvent(tid, type, t, data, wall){ return {id:uid('ev'), targetId:tid, type, t, wall: wall ?? Date.now(), data, voided:false, history:[]}; }
+let undoStack = [];
+function record(sess, tid, type, data, t, wall){
+  const ev = mkEvent(tid, type, t ?? Calc.observedMs(sess), data, wall);
+  sess.events.push(ev); undoStack.push({kind:'add', evId:ev.id, label: describeEvent(ev)}); save(); return ev;
+}
+function voidEvent(ev, reason){ ev.voided = true; ev.history.push({at:Date.now(), action:'voided', reason: reason || ''}); save(); }
+function restoreEvent(ev, reason){ ev.voided = false; ev.history.push({at:Date.now(), action:'restored', reason: reason || ''}); save(); }
+function editEvent(ev, newData, reason){
+  const changes = {};
+  for(const k of Object.keys(newData)){ const a = ev.data[k], b = newData[k]; if(JSON.stringify(a) !== JSON.stringify(b)) changes[k] = {from:a, to:b}; }
+  if(!Object.keys(changes).length) return false;
+  ev.history.push({at:Date.now(), action:'edited', changes, reason: reason || ''});
+  Object.assign(ev.data, newData); save(); return true;
+}
+function scoreInterval(sess, tg, idx, value, reason){
+  const ev = sess.events.find(e => e.targetId === tg.id && e.type === 'interval' && e.data.index === idx && !e.voided);
+  if(ev){ const prev = ev.data.value; if(prev === value) return; editEvent(ev, {value}, reason); undoStack.push({kind:'set', evId:ev.id, prev, label:`Interval ${idx+1} change`}); }
+  else if(value){ record(sess, tg.id, 'interval', {index:idx, value}); }
+  save();
+}
+function undoLast(sess){
+  const u = undoStack.pop(); if(!u){ toast('Nothing to undo'); return; }
+  const ev = sess.events.find(e => e.id === u.evId); if(!ev) return;
+  if(u.kind === 'add') voidEvent(ev, 'Undone during session');
+  else if(u.kind === 'set'){ editEvent(ev, {value:u.prev}, 'Undone during session'); }
+  render(); toast('Undid: ' + u.label);
+}
+
+/* =====================================================================
+   View: Live session
+   ===================================================================== */
+let lastCompleted = {};
+function viewLive(){
+  const sess = liveSession();
+  if(!sess) return `<div class="empty"><p>No observation is running.</p><p><button class="primary" data-act="goObserve">Start an observation</button></p></div>`;
+  const st = stuById(sess.studentId);
+  const tgs = sess.targetIds.map(tgById).filter(Boolean);
+  const paused = sess.status === 'paused';
+  const recent = sess.events.slice().sort((a,b) => b.wall - a.wall).slice(0, 6);
+  return `
+  <h1 class="srOnly">Live observation</h1>
+  <section class="livehead" aria-label="Session controls">
+    <div class="stack" style="gap:2px">
+      <span class="eyebrow">${esc(st?.code)} · ${esc(sess.setting)}</span>
+      <div class="row" style="gap:10px"><span class="clock" data-clock aria-label="Observed time">${fmtClock(Calc.observedMs(sess))}</span><span class="status ${paused ? 'paused' : 'rec'}">${paused ? 'Paused' : 'Recording'}</span></div>
+    </div>
+    <span class="spacer"></span>
+    <div class="row">
+      ${paused ? `<button class="primary" id="btnResume" data-act="resume">Resume <kbd>P</kbd></button>` : `<button id="btnPause" data-act="pause">Pause <kbd>P</kbd></button>`}
+      <button id="btnUndo" data-act="undo" ${undoStack.length ? '' : 'disabled'}>Undo <kbd>U</kbd></button>
+      <button class="danger" id="btnEnd" data-act="end">End</button>
+    </div>
+  </section>
+  ${paused ? `<div class="notice"><div>Observation is paused. Paused time is excluded from all timers, rates, and intervals. You can still fix entries.</div></div>` : ''}
+  <div class="cards">${tgs.map((t, i) => targetCard(sess, t, i)).join('')}</div>
+  <div class="grid2">
+    <section class="panel" aria-labelledby="recentT"><header><h2 id="recentT">Recent entries</h2></header>
+      ${recent.length ? `<div class="tablewrap"><table><thead><tr><th>Time</th><th>Target</th><th>Entry</th></tr></thead><tbody>
+      ${recent.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td>${esc(tgById(e.targetId)?.name)}</td><td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">undone</span>' : ''}</td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="sub">Entries appear here as you record.</p>`}
+    </section>
+    <section class="panel" aria-labelledby="notesT"><header><h2 id="notesT">Session notes</h2></header>
+      <label class="f">Notes <span class="hint">Context only. No names or identifying details.</span><textarea id="liveNotes" data-input="sessNotes">${esc(sess.notes)}</textarea></label>
+      <p class="small sub">Keyboard: number keys run each card's main action (shown on the card). <kbd>P</kbd> pauses or resumes, <kbd>U</kbd> undoes the last entry.</p>
+    </section>
+  </div>`;
+}
+function keyChip(i){ return i < 9 ? `<kbd title="Keyboard shortcut">${i+1}</kbd>` : ''; }
+function targetCard(sess, t, i){
+  const r = Calc.summarize(sess, t);
+  const m = METHODS[t.method];
+  const running = !!sess.running?.[t.id];
+  const head = `<header><div class="stack" style="gap:4px"><h3>${esc(t.name)}</h3><span class="row" style="gap:6px"><span class="chip acc">${m.label}</span>${['frequency','duration','latency','partial'].includes(t.method) ? keyChip(i) : ''}</span></div>
+    <div style="text-align:right"><div class="mono" style="font-size:1.35rem;font-weight:600">${esc(r.big)}</div><div class="small sub">${esc(r.bigLabel)}</div></div></header>
+    <details><summary>Definition</summary><p>${esc(t.definition)}</p></details>`;
+  let body = '';
+  const id = t.id;
+  switch(t.method){
+    case 'frequency':
+      body = `<button class="big count primary" id="b_${id}_count" data-act="count" data-t="${id}" aria-label="Add one ${esc(t.name)}. Current count ${r.count}"><span>+1 ${esc(t.name)}</span><span class="n">${r.count}</span></button>
+        <div class="row"><button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.count ? '' : 'disabled'}>Undo last tap</button><span class="spacer"></span><span class="stat">Rate <b data-rate="${id}">${r.value == null ? '—' : fmtNum(r.value, 2)}</b> per min</span></div>`;
+      break;
+    case 'duration':
+      body = `<button class="big ${running ? 'on' : 'primary'}" id="b_${id}_dur" data-act="durToggle" data-t="${id}" aria-pressed="${running}">${running ? `Stop timer · <span class="mono" data-run="${id}">${fmtClock(Calc.observedMs(sess) - sess.running[id].t)}</span>` : 'Start timer'}</button>
+        <div class="stat"><span>Episodes <b>${r.episodes}</b></span><span>Total <b data-durtotal="${id}">${fmtClock(r.total)}</b></span><span>Mean <b>${r.mean == null ? '—' : fmtClock(r.mean)}</b></span></div>
+        <button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.episodes - (running ? 1 : 0) > 0 ? '' : 'disabled'}>Undo last episode</button>`;
+      break;
+    case 'latency': {
+      const p = sess.latencyPending?.[id];
+      const to = t.config.timeoutSec || 0;
+      body = p ? `<div class="prompt" role="group" aria-label="Waiting for response"><p>Instruction given · <span class="mono" data-lat="${id}">${fmtClock(Calc.observedMs(sess) - p.t)}</span>${to ? ` <span class="small">(times out at ${to} s)</span>` : ''}</p>
+          <div class="btns2"><button class="yes" id="b_${id}_resp" data-act="latResp" data-t="${id}">Response</button><button class="no" id="b_${id}_nr" data-act="latNR" data-t="${id}">No response</button></div></div>`
+        : `<button class="big primary" id="b_${id}_trig" data-act="latTrig" data-t="${id}">Mark instruction given</button>`;
+      body += `<div class="stat"><span>Trials <b>${r.trials}</b></span><span>Responded <b>${r.responded}</b></span><span>No response <b>${r.noResp}</b></span><span>Timed out <b>${r.timeouts}</b></span></div>
+        <div class="row"><span class="small sub">Last: ${(() => { const last = Calc.events(sess, id, 'latency').slice(-1)[0]; return last ? esc(describeEvent(last)) : '—'; })()}</span><span class="spacer"></span><button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.trials ? '' : 'disabled'}>Undo last trial</button></div>`;
+      break;
+    }
+    case 'partial': case 'whole': case 'mts': {
+      const w = INT_WORDS[t.method];
+      const L = r.L; const obs = Calc.observedMs(sess); const cur = Math.floor(obs / L);
+      const map = Calc.intervalMap(sess, id);
+      const pending = []; for(let k = r.completed - 1; k >= 0 && pending.length < 50; k--) if(!(k in map)) pending.push(k);
+      const showP = pending.slice(0, 2);
+      const curMarked = map[cur];
+      let curCtl = '';
+      if(t.method === 'partial') curCtl = curMarked === 'yes'
+        ? `<button class="big on" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="">Marked "Occurred" in interval ${cur+1} · tap to clear</button>`
+        : `<button class="big primary" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="yes">Occurred in this interval</button>`;
+      if(t.method === 'whole') curCtl = curMarked === 'no'
+        ? `<button class="sm" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="">Interval ${cur+1} marked "Not throughout" · clear</button>`
+        : `<button class="sm" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="no">Behavior stopped: mark "Not throughout" now</button>`;
+      body = `<div class="stack" style="gap:6px"><div class="row small"><span>Interval <b class="mono" data-intn="${id}">${cur+1}</b> · ${L/1000}-s intervals</span><span class="spacer"></span><span class="mono" data-intleft="${id}">${fmtClock(L - (obs % L))}</span> left</div>
+        <div class="prog" aria-hidden="true"><i data-intbar="${id}" style="width:${(obs % L)/L*100}%"></i></div></div>
+        ${curCtl}
+        ${showP.map(k => `<div class="prompt" role="group" aria-label="Score interval ${k+1}"><p>Interval ${k+1} ended. ${w.q}</p><div class="btns3">
+          <button class="yes" id="b_${id}_p${k}y" data-act="intScore" data-t="${id}" data-k="${k}" data-v="yes">${w.yes}</button>
+          <button class="no" id="b_${id}_p${k}n" data-act="intScore" data-t="${id}" data-k="${k}" data-v="no">${w.no}</button>
+          <button class="ghost" id="b_${id}_p${k}s" data-act="intSkip" data-t="${id}" data-k="${k}">Leave unscored</button></div></div>`).join('')}
+        ${pending.length > 2 ? `<p class="small sub">${pending.length - 2} earlier interval(s) not scored. Tap a cell below to score it.</p>` : ''}
+        ${stripHTML(r.cells, t, true, sess.status !== 'ended' ? cur : null)}
+        <div class="stat"><span>Scored <b>${r.scored}</b></span><span>${w.yes} <b>${r.yes}</b></span><span>Unscored <b>${r.unscored}</b></span></div>`;
+      break;
+    }
+    case 'percent':
+      body = `<div class="${t.config.allowPrompted === false ? 'btns2' : 'btns3'}">
+          <button class="yes" id="b_${id}_c" data-act="trial" data-t="${id}" data-v="correct">Correct</button>
+          ${t.config.allowPrompted === false ? '' : `<button id="b_${id}_p" data-act="trial" data-t="${id}" data-v="prompted">Prompted</button>`}
+          <button class="no" id="b_${id}_i" data-act="trial" data-t="${id}" data-v="incorrect">Incorrect</button></div>
+        <div class="row"><span class="stat"><span>Correct <b>${r.c}</b></span><span>Prompted <b>${r.p}</b></span><span>Incorrect <b>${r.i}</b></span><span><b>${r.c}/${r.n}</b></span></span><span class="spacer"></span>
+        <button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.n ? '' : 'disabled'}>Undo last trial</button></div>`;
+      break;
+    case 'task': {
+      const run = sess.taRun?.[id]; const steps = t.config.steps || [];
+      body = run ? `<div class="tasteps">${steps.map((s, k) => `<div class="tastep"><span><b>${k+1}.</b> ${esc(s)}</span><div class="levels" role="group" aria-label="Prompt level for step ${k+1}">
+          ${LEVELS.map(l => `<button type="button" id="b_${id}_s${k}_${l.k}" data-act="taScore" data-t="${id}" data-k="${k}" data-v="${l.k}" aria-pressed="${run.scores[k] === l.k}" title="${l.label}" aria-label="${l.label}">${l.k}</button>`).join('')}</div></div>`).join('')}</div>
+          <div class="btns2"><button class="primary" id="b_${id}_fin" data-act="taFinish" data-t="${id}">Finish run</button><button class="danger" id="b_${id}_dis" data-act="taDiscard" data-t="${id}">Discard run</button></div>
+          <p class="small sub">${LEVELS.map(l => `${l.k} = ${l.label}`).join(' · ')}</p>`
+        : `<button class="big primary" id="b_${id}_start" data-act="taStart" data-t="${id}">Start a run (${steps.length} steps)</button>`;
+      body += `<div class="stat"><span>Runs <b>${r.runs}</b></span><span>Independent <b>${r.indep}/${r.scored}</b></span></div>`;
+      break;
+    }
+    case 'abc': {
+      const d = sess.abcDraft?.[id];
+      const ants = t.config.antecedents?.length ? t.config.antecedents : DEFAULT_ANTECEDENTS;
+      const cons = t.config.consequences?.length ? t.config.consequences : DEFAULT_CONSEQUENCES;
+      body = d ? `<div class="stack">
+          <p class="small"><b>Behavior marked at ${fmtClock(d.t)}</b> (${fmtWall(d.wall)})</p>
+          <label class="f">Setting / context<input type="text" id="abc_${id}_context" data-abc="${id}" data-field="context" value="${esc(d.context)}"></label>
+          <label class="f">Antecedent (what happened right before)<input type="text" id="abc_${id}_antecedent" data-abc="${id}" data-field="antecedent" value="${esc(d.antecedent)}"></label>
+          <div class="chips">${ants.map((a, k) => `<button type="button" id="abc_${id}_ac${k}" data-act="abcChip" data-t="${id}" data-field="antecedent" data-v="${esc(a)}" aria-pressed="${d.antecedent === a}">${esc(a)}</button>`).join('')}</div>
+          <label class="f">Behavior (observable description)<input type="text" id="abc_${id}_behavior" data-abc="${id}" data-field="behavior" value="${esc(d.behavior)}" placeholder="What the student did, in observable terms"></label>
+          <label class="f">Consequence (what happened right after)<input type="text" id="abc_${id}_consequence" data-abc="${id}" data-field="consequence" value="${esc(d.consequence)}"></label>
+          <div class="chips">${cons.map((a, k) => `<button type="button" id="abc_${id}_cc${k}" data-act="abcChip" data-t="${id}" data-field="consequence" data-v="${esc(a)}" aria-pressed="${d.consequence === a}">${esc(a)}</button>`).join('')}</div>
+          <label class="f">Notes (optional)<input type="text" id="abc_${id}_notes" data-abc="${id}" data-field="notes" value="${esc(d.notes)}"></label>
+          <div class="btns2"><button class="primary" id="b_${id}_save" data-act="abcSave" data-t="${id}">Save entry</button><button id="b_${id}_cancel" data-act="abcCancel" data-t="${id}">Discard</button></div></div>`
+        : `<button class="big primary" id="b_${id}_mark" data-act="abcMark" data-t="${id}">Mark behavior now</button><p class="small sub">Tap when the behavior happens to capture the time, then fill in the details.</p>`;
+      break;
+    }
+  }
+  return `<article class="tcard ${running || sess.latencyPending?.[id] ? 'active' : ''}" aria-label="${esc(t.name)}, ${m.label}">${head}${body}</article>`;
+}
+function stripHTML(cells, t, clickable, cur){
+  const w = INT_WORDS[t.method];
+  const out = cells.map((v, k) => {
+    const cls = v === 'yes' ? 'yes' : v === 'no' ? 'no' : 'un'; const g = v === 'yes' ? '+' : v === 'no' ? '–' : '?';
+    const lbl = `Interval ${k+1}: ${v === 'yes' ? w.yes : v === 'no' ? w.no : 'not scored'}`;
+    return clickable ? `<button class="cell ${cls}" id="c_${t.id}_${k}" data-act="intCycle" data-t="${t.id}" data-k="${k}" aria-label="${lbl}. Activate to change." title="${lbl}">${g}</button>`
+      : `<span class="cell ${cls}" role="img" aria-label="${lbl}" title="${lbl}" style="display:inline-flex;align-items:center;justify-content:center">${g}</span>`;
+  });
+  if(cur != null && cur >= cells.length) out.push(`<span class="cell cur" role="img" aria-label="Interval ${cur+1} in progress" style="display:inline-flex;align-items:center;justify-content:center">…</span>`);
+  return `<div class="stack" style="gap:6px"><div class="strip">${out.join('')}</div>
+    <div class="legend"><span><span class="cell yes">+</span> ${w.yes}</span><span><span class="cell no">–</span> ${w.no}</span><span><span class="cell un">?</span> Not scored (excluded)</span></div></div>`;
+}
+function describeEvent(e){
+  const tg = tgById(e.targetId); const d = e.data;
+  switch(e.type){
+    case 'count': return 'Occurrence (+1)';
+    case 'episode': return `Episode ${fmtClock(d.start)}–${fmtClock(d.end)} (${fmtDur(d.end - d.start)})${d.endedBy ? ', stopped at ' + d.endedBy : ''}`;
+    case 'latency': return d.outcome === 'response' ? `Response after ${fmtNum((d.response - d.trigger)/1000, 1)} s` : d.outcome === 'timeout' ? `Timed out (no response within ${tg?.config.timeoutSec || '?'} s)` : d.outcome === 'incomplete' ? 'Incomplete: session ended before a response' : 'No response (observer marked)';
+    case 'interval': { const w = INT_WORDS[tg?.method] || INT_WORDS.partial; const L = (tg?.config.intervalSec || 10); return `Interval ${d.index+1} (${fmtClock(d.index*L*1000)}–${fmtClock((d.index+1)*L*1000)}): ${d.value === 'yes' ? w.yes : d.value === 'no' ? w.no : 'not scored'}`; }
+    case 'trial': return d.result === 'correct' ? 'Correct' : d.result === 'prompted' ? 'Correct with prompt' : 'Incorrect';
+    case 'ta_run': { const sc = d.scores.filter(Boolean); return `Run: ${sc.filter(s => s === 'I').length}/${sc.length} steps independent (${d.scores.map(s => s || '·').join(' ')})`; }
+    case 'abc': return `A: ${d.antecedent || '—'} · B: ${d.behavior || '—'} · C: ${d.consequence || '—'}`;
+  }
+  return e.type;
+}
+
+/* ---------- live tick ---------- */
+let tickTimer = null;
+function tick(first){
+  const sess = liveSession();
+  $$('[data-clock]').forEach(el => { if(sess) el.textContent = fmtClock(Calc.observedMs(sess)); });
+  if(route.view !== 'live' || !sess) return;
+  const obs = Calc.observedMs(sess);
+  let needRender = false;
+  for(const t of sess.targetIds.map(tgById).filter(Boolean)){
+    if(t.method === 'duration' && sess.running?.[t.id]){
+      const el = $(`[data-run="${t.id}"]`); if(el) el.textContent = fmtClock(obs - sess.running[t.id].t);
+      const tot = $(`[data-durtotal="${t.id}"]`); if(tot) tot.textContent = fmtClock(Calc.summarize(sess, t).total);
+    }
+    if(t.method === 'frequency'){ const el = $(`[data-rate="${t.id}"]`); if(el){ const r = Calc.summarize(sess, t); el.textContent = r.value == null ? '—' : fmtNum(r.value, 2); } }
+    if(t.method === 'latency' && sess.latencyPending?.[t.id]){
+      const p = sess.latencyPending[t.id]; const el = $(`[data-lat="${t.id}"]`); if(el) el.textContent = fmtClock(obs - p.t);
+      const to = (t.config.timeoutSec || 0) * 1000;
+      if(to && obs - p.t >= to){ record(sess, t.id, 'latency', {trigger:p.t, response:null, outcome:'timeout'}, p.t, p.wall); delete sess.latencyPending[t.id]; save(); needRender = true; toast(`${t.name}: timed out`); }
+    }
+    if(INTERVAL_METHODS.includes(t.method)){
+      const L = (t.config.intervalSec || 10) * 1000; const done = Math.floor(obs / L);
+      const n = $(`[data-intn="${t.id}"]`); if(n) n.textContent = Math.floor(obs / L) + 1;
+      const left = $(`[data-intleft="${t.id}"]`); if(left) left.textContent = fmtClock(L - (obs % L));
+      const bar = $(`[data-intbar="${t.id}"]`); if(bar) bar.style.width = ((obs % L) / L * 100) + '%';
+      if(lastCompleted[t.id] == null) lastCompleted[t.id] = done;
+      else if(done > lastCompleted[t.id]){ lastCompleted[t.id] = done; needRender = true; if(t.config.cue !== false && sess.status === 'active') cue(); }
+    }
+  }
+  if(needRender && !first) renderLivePreservingInputs();
+}
+function renderLivePreservingInputs(){
+  // Don't wipe ABC fields or notes while typing; those are saved on input already, so re-render is safe.
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+function startTicker(){ clearInterval(tickTimer); tickTimer = setInterval(() => tick(false), 250); }
+
+/* =====================================================================
+   View: Students & targets
+   ===================================================================== */
+let editingTarget = null; // target id or 'new'
+function viewStudents(){
+  const sel = S.ui.selStudent && stuById(S.ui.selStudent) ? S.ui.selStudent : (S.students[0]?.id || '');
+  const st = stuById(sel);
+  const tgs = st ? S.targets.filter(t => t.studentId === st.id) : [];
+  return `
+  <section class="stack" style="gap:4px"><h1>Students and targets</h1>
+    <p class="sub">Each student is a code you assign. Keep the key that links codes to real students outside this app, under your district's rules.</p></section>
+  <div class="grid2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))">
+    <section class="panel" aria-labelledby="stuT" style="align-self:start">
+      <header><h2 id="stuT">Students</h2><button class="primary sm" data-act="newStudent" id="btnNewStu">Add student</button></header>
+      ${S.students.length ? `<div class="list" role="list">${S.students.map(s => `<button class="lrow" role="listitem" data-act="selStudent" data-id="${s.id}" id="sel_${s.id}" aria-current="${s.id === sel}">
+        <span class="t mono">${esc(s.code)}</span>${s.grade ? `<span class="chip">Grade ${esc(s.grade)}</span>` : ''}${s.demo ? '<span class="chip mark">Demo</span>' : ''}<span class="spacer"></span><span class="small sub">${S.targets.filter(t => t.studentId === s.id && !t.archived).length} targets</span></button>`).join('')}</div>`
+      : `<div class="empty">No students yet.</div>`}
+    </section>
+    <section class="panel" aria-labelledby="tgT">
+      ${st ? `<header><div class="stack" style="gap:2px"><span class="eyebrow">Student</span><h2 id="tgT" class="mono">${esc(st.code)}</h2></div>
+        <div class="row"><button class="sm" data-act="editStudent" data-id="${st.id}" id="btnEditStu">Edit</button><button class="sm danger" data-act="delStudent" data-id="${st.id}" id="btnDelStu">Delete</button></div></header>
+        ${st.notes ? `<p class="sub small">${esc(st.notes)}</p>` : ''}
+        ${editingTarget ? targetForm(st, editingTarget === 'new' ? null : tgById(editingTarget)) : `
+        <div class="row"><h3>Targets</h3><span class="spacer"></span><button class="primary" data-act="newTarget" id="btnNewTarget">Add target</button></div>
+        ${tgs.length ? `<div class="list">${tgs.map(t => `<div class="lrow" style="align-items:flex-start">
+            <div class="stack" style="gap:4px;flex:1 1 240px"><span class="row" style="gap:8px"><span class="t">${esc(t.name)}</span><span class="chip acc">${METHODS[t.method].label}</span>${t.archived ? '<span class="chip">Archived</span>' : ''}</span>
+              <span class="small sub">${esc(t.definition)}</span>
+              <span class="small">${targetConfigText(t)}${t.goal?.text ? ` · Goal: ${esc(t.goal.text)}` : ''}</span></div>
+            <div class="row"><button class="sm" data-act="editTarget" data-id="${t.id}" id="et_${t.id}">Edit</button><button class="sm ghost" data-act="archiveTarget" data-id="${t.id}" id="at_${t.id}">${t.archived ? 'Restore' : 'Archive'}</button></div></div>`).join('')}</div>`
+          : `<div class="empty">No targets yet. Add a behavior or skill to measure.</div>`}`}
+      ` : `<div class="empty">Add a student to begin.</div>`}
+    </section>
+  </div>`;
+}
+function targetConfigText(t){
+  const c = t.config || {};
+  if(INTERVAL_METHODS.includes(t.method)) return `${c.intervalSec || 10}-second intervals`;
+  if(t.method === 'latency') return c.timeoutSec ? `Times out after ${c.timeoutSec} s` : 'No timeout';
+  if(t.method === 'task') return `${(c.steps || []).length} steps`;
+  if(t.method === 'percent') return c.allowPrompted === false ? 'Correct / incorrect' : 'Correct / prompted / incorrect';
+  if(t.method === 'abc') return 'Narrative ABC';
+  return METHODS[t.method].blurb.split('.')[0];
+}
+let formMethod = null;
+function targetForm(st, t){
+  const m = formMethod || t?.method || 'frequency';
+  const c = t?.config || {};
+  return `<form class="stack" data-form="target" style="gap:14px" aria-label="${t ? 'Edit target' : 'New target'}">
+    <h3>${t ? 'Edit target' : 'New target'}</h3>
+    ${!t ? `<fieldset><legend>Start from a template (optional)</legend><div class="chips">${TEMPLATES.map((x, i) => `<button type="button" data-act="tplFill" data-i="${i}" id="tpl_${i}">${esc(x.name)}</button>`).join('')}</div></fieldset>` : ''}
+    <label class="f">Name<input type="text" id="tName" name="name" required value="${esc(t?.name || '')}" placeholder="e.g. Calling out"></label>
+    <label class="f">Operational definition <span class="hint">Describe what it looks like so two observers would agree.</span><textarea id="tDef" name="definition" required>${esc(t?.definition || '')}</textarea></label>
+    <fieldset><legend>Recording method</legend><div class="methods">
+      ${Object.entries(METHODS).map(([k, x]) => `<label class="mopt"><input type="radio" name="method" value="${k}" id="m_${k}" ${k === m ? 'checked' : ''} data-act-change="formMethod"><span><b>${x.label}</b>${x.blurb}</span></label>`).join('')}
+    </div></fieldset>
+    ${INTERVAL_METHODS.includes(m) ? `<div class="fields"><label class="f">Interval length (seconds)<input type="number" id="tInt" name="intervalSec" min="3" max="600" required value="${c.intervalSec || (m === 'mts' ? 15 : 10)}"></label>
+      <label class="check" style="align-self:end"><input type="checkbox" name="cue" id="tCue" ${c.cue === false ? '' : 'checked'}><span>Sound and vibration cue at each interval end</span></label></div>` : ''}
+    ${m === 'latency' ? `<label class="f">Timeout (seconds) <span class="hint">If no response by then, the trial is recorded as "timed out". Use 0 for no timeout.</span><input type="number" id="tTo" name="timeoutSec" min="0" max="3600" value="${c.timeoutSec ?? 30}"></label>` : ''}
+    ${m === 'percent' ? `<label class="check"><input type="checkbox" name="allowPrompted" id="tPr" ${c.allowPrompted === false ? '' : 'checked'}><span>Record prompted trials separately (counted in the denominator, not the independent numerator)</span></label>` : ''}
+    ${m === 'task' ? `<label class="f">Steps, in order <span class="hint">One step per line.</span><textarea id="tSteps" name="steps" required rows="6">${esc((c.steps || []).join('\n'))}</textarea></label>` : ''}
+    ${m === 'abc' ? `<div class="fields"><label class="f">Antecedent quick picks <span class="hint">One per line</span><textarea id="tAnt" name="antecedents" rows="6">${esc((c.antecedents || DEFAULT_ANTECEDENTS).join('\n'))}</textarea></label>
+      <label class="f">Consequence quick picks <span class="hint">One per line</span><textarea id="tCon" name="consequences" rows="6">${esc((c.consequences || DEFAULT_CONSEQUENCES).join('\n'))}</textarea></label></div>
+      <p class="small sub">Sightline lists what happened before and after. It does not suggest a function for the behavior; that is for your professional interpretation.</p>` : ''}
+    <div class="fields"><label class="f">Goal (optional)<input type="text" id="tGoal" name="goalText" value="${esc(t?.goal?.text || '')}" placeholder="e.g. 80% across 3 sessions"></label>
+      <label class="f">Goal line on graph <span class="hint">In ${esc(METHODS[m].unit)}</span><input type="number" step="any" id="tGoalV" name="goalValue" value="${t?.goal?.value ?? ''}"></label></div>
+    <div class="row end"><button type="button" data-act="cancelTarget" id="btnCancelT">Cancel</button><button type="submit" class="primary" id="btnSaveT">Save target</button></div>
+  </form>`;
+}
+
+/* =====================================================================
+   Filters
+   ===================================================================== */
+function filtered(){
+  const f = S.ui.filters;
+  return sortedSessions(S.sessions.filter(s => s.status === 'ended'
+    && (!f.student || s.studentId === f.student)
+    && (!f.target || s.targetIds.includes(f.target))
+    && (!f.setting || s.setting === f.setting)
+    && (!f.observer || s.observer === f.observer)
+    && (!f.from || s.date >= f.from) && (!f.to || s.date <= f.to)));
+}
+function filterBar(prefix){
+  const f = S.ui.filters;
+  const settings = [...new Set(S.sessions.map(s => s.setting).filter(Boolean))].sort();
+  const observers = [...new Set(S.sessions.map(s => s.observer).filter(Boolean))].sort();
+  const tgs = S.targets.filter(t => !f.student || t.studentId === f.student);
+  const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
+  return `<form class="fields" data-form="filters" aria-label="Filter sessions">
+    <label class="f">Student<select id="${prefix}fStu" data-filter="student">${opt('', 'All students', f.student)}${S.students.map(s => opt(s.id, s.code, f.student)).join('')}</select></label>
+    <label class="f">Target<select id="${prefix}fTg" data-filter="target">${opt('', 'All targets', f.target)}${tgs.map(t => opt(t.id, `${t.name} (${stuById(t.studentId)?.code})`, f.target)).join('')}</select></label>
+    <label class="f">Setting<select id="${prefix}fSet" data-filter="setting">${opt('', 'All settings', f.setting)}${settings.map(s => opt(s, s, f.setting)).join('')}</select></label>
+    <label class="f">Observer<select id="${prefix}fObs" data-filter="observer">${opt('', 'All observers', f.observer)}${observers.map(s => opt(s, s, f.observer)).join('')}</select></label>
+    <label class="f">From<input type="date" id="${prefix}fFrom" data-filter="from" value="${esc(f.from)}"></label>
+    <label class="f">To<input type="date" id="${prefix}fTo" data-filter="to" value="${esc(f.to)}"></label>
+  </form>`;
+}
+
+/* =====================================================================
+   View: Sessions list
+   ===================================================================== */
+function viewSessions(){
+  const list = filtered();
+  const f = S.ui.filters; const anyF = Object.values(f).some(Boolean);
+  return `
+  <section class="stack" style="gap:4px"><h1>Sessions</h1><p class="sub">Review past observations, filter them, and export.</p></section>
+  <section class="panel" aria-labelledby="filT"><header><h2 id="filT">Filter</h2>${anyF ? `<button class="ghost sm" data-act="clearFilters" id="btnClearF">Clear filters</button>` : ''}</header>${filterBar('s')}</section>
+  <section class="panel" aria-labelledby="listT">
+    <header><h2 id="listT">${list.length} session${list.length === 1 ? '' : 's'}</h2>
+      <div class="row"><button class="sm" data-act="csvSummary" id="btnCsvS" ${list.length ? '' : 'disabled'}>Summary CSV</button><button class="sm" data-act="csvEvents" id="btnCsvE" ${list.length ? '' : 'disabled'}>Event-level CSV</button></div></header>
+    ${list.length ? `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Start</th><th>Student</th><th>Setting</th><th>Observer</th><th class="n">Observed</th><th>Targets</th><th><span class="srOnly">Open</span></th></tr></thead><tbody>
+      ${list.map(s => { const tg = s.targetIds.map(tgById).filter(Boolean).filter(t => !f.target || t.id === f.target); return `<tr>
+        <td>${fmtDate(s.date)}</td><td>${fmtTime12(s.startTime)}</td><td class="mono">${esc(stuById(s.studentId)?.code)}</td><td>${esc(s.setting)}</td><td>${esc(s.observer)}</td>
+        <td class="n">${fmtClock(Calc.observedMs(s))}</td><td class="small">${tg.map(t => esc(t.name)).join(', ')}</td>
+        <td><button class="sm" data-act="openSession" data-id="${s.id}" id="os_${s.id}">Open</button></td></tr>`; }).join('')}
+      </tbody></table></div>` : `<div class="empty">No sessions match these filters.</div>`}
+    <p class="small sub">Exports include only the sessions listed${f.target ? ' and only the selected target' : ''}. Exported files leave this app, so store them under your district's data rules.</p>
+  </section>
+  <section class="panel" aria-labelledby="bkT"><header><h2 id="bkT">Backup</h2></header>
+    <p class="sub small">Everything is stored only in this browser. Save a backup file to move data to another device or keep a copy.</p>
+    <div class="row"><button data-act="backup" id="btnBackup">Save backup (.json)</button>
+    <button data-act="restorePick" id="btnRestore">Restore from backup…</button><input type="file" id="restoreFile" accept="application/json,.json" hidden data-change="restore"></div>
+  </section>`;
+}
+
+/* =====================================================================
+   View: Session detail
+   ===================================================================== */
+function viewSession(id){
+  const s = sesById(id);
+  if(!s) return `<div class="empty">Session not found. <button class="ghost" data-act="goSessions">Back to sessions</button></div>`;
+  const st = stuById(s.studentId);
+  const tgs = s.targetIds.map(tgById).filter(Boolean);
+  const evs = s.events.slice().sort((a,b) => a.t - b.t);
+  return `
+  <div class="row"><button class="ghost sm" data-act="goSessions" id="btnBack">← All sessions</button></div>
+  <section class="panel" aria-labelledby="sesT">
+    <header><div class="stack" style="gap:2px"><span class="eyebrow">Observation summary</span><h1 id="sesT" style="font-size:1.4rem"><span class="mono">${esc(st?.code)}</span> · ${fmtDate(s.date)}</h1></div>
+      <div class="row"><button class="sm" data-act="editMeta" data-id="${s.id}" id="btnEditMeta">Edit details</button><button class="sm" data-act="copyNarr" data-id="${s.id}" id="btnNarr">Copy summary text</button><button class="sm primary" data-act="pdfSession" data-id="${s.id}" id="btnPdf">PDF report</button><button class="sm" data-act="csvOne" data-id="${s.id}" id="btnCsv1">CSV</button><button class="sm danger" data-act="delSession" data-id="${s.id}" id="btnDelS">Delete</button></div></header>
+    <dl class="kv"><dt>Student code</dt><dd class="mono">${esc(st?.code)}</dd><dt>Setting</dt><dd>${esc(s.setting)}</dd><dt>Observer</dt><dd>${esc(s.observer || '—')}</dd>
+      <dt>Date and start</dt><dd>${fmtDate(s.date)}, ${fmtTime12(s.startTime)}</dd><dt>Observed time</dt><dd class="mono">${fmtClock(Calc.observedMs(s))}${s.segments.length > 1 ? ` <span class="small sub">(paused ${s.segments.length - 1}×; paused time excluded)</span>` : ''}</dd></dl>
+    ${s.metaHistory?.length ? `<details class="hist"><summary>Details edited ${s.metaHistory.length}×</summary><ul>${s.metaHistory.map(h => `<li>${new Date(h.at).toLocaleString()}: ${Object.entries(h.changes).map(([k, v]) => `${esc(k)} “${esc(v.from)}” → “${esc(v.to)}”`).join('; ')}${h.reason ? ` (${esc(h.reason)})` : ''}</li>`).join('')}</ul></details>` : ''}
+    <label class="f">Notes<textarea id="sesNotes" data-input="sesNotesDetail" data-id="${s.id}">${esc(s.notes)}</textarea><span class="hint">Saved as you type. No names or identifying details.</span></label>
+  </section>
+  ${tgs.map(t => targetSummary(s, t)).join('')}
+  <section class="panel" aria-labelledby="tlT"><header><h2 id="tlT">Timeline</h2><span class="small sub">${evs.length} entries · edits keep the original timestamp and a history</span></header>
+    ${evs.length ? `<div class="tablewrap"><table><thead><tr><th class="n">Session time</th><th>Clock</th><th>Target</th><th>Entry</th><th><span class="srOnly">Actions</span></th></tr></thead><tbody>
+    ${evs.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td class="n">${fmtWall(e.wall)}</td><td>${esc(tgById(e.targetId)?.name)}</td>
+      <td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">voided</span>' : ''}${e.history.length ? `<details class="hist keep"><summary>History (${e.history.length})</summary><ul>${e.history.map(h => `<li>${new Date(h.at).toLocaleString()}: ${h.action}${h.changes ? ' ' + Object.entries(h.changes).map(([k, v]) => `${esc(k)} ${esc(fmtVal(v.from))} → ${esc(fmtVal(v.to))}`).join('; ') : ''}${h.reason ? ` (${esc(h.reason)})` : ''}</li>`).join('')}</ul></details>` : ''}</td>
+      <td class="keep"><div class="row" style="gap:4px;flex-wrap:nowrap">${e.voided ? `<button class="sm" data-act="restoreEv" data-s="${s.id}" data-e="${e.id}" id="re_${e.id}">Restore</button>` : `<button class="sm" data-act="editEv" data-s="${s.id}" data-e="${e.id}" id="ee_${e.id}">Edit</button><button class="sm danger" data-act="voidEv" data-s="${s.id}" data-e="${e.id}" id="ve_${e.id}">Void</button>`}</div></td></tr>`).join('')}
+    </tbody></table></div>` : `<div class="empty">No entries were recorded.</div>`}
+  </section>`;
+}
+function fmtVal(v){ if(v == null) return '—'; if(Array.isArray(v)) return v.map(x => x || '·').join(' '); return String(v); }
+function targetSummary(s, t){
+  const r = Calc.summarize(s, t); const m = METHODS[t.method];
+  let extra = '';
+  if(t.method === 'frequency' && r.count) extra = `<div class="chart">${cumulativeChart(s, t)}</div>`;
+  if(t.method === 'duration'){ const eps = Calc.events(s, t.id, 'episode'); if(eps.length) extra = `<div class="tablewrap"><table><thead><tr><th>#</th><th class="n">Start</th><th class="n">End</th><th class="n">Duration</th></tr></thead><tbody>${eps.map((e, i) => `<tr><td>${i+1}</td><td class="n">${fmtClock(e.data.start)}</td><td class="n">${fmtClock(e.data.end)}</td><td class="n">${fmtDur(e.data.end - e.data.start)}</td></tr>`).join('')}</tbody></table></div>`; }
+  if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) extra = `<div class="tablewrap"><table><thead><tr><th>#</th><th class="n">Instruction at</th><th>Outcome</th><th class="n">Latency</th></tr></thead><tbody>${tr.map((e, i) => `<tr><td>${i+1}</td><td class="n">${fmtClock(e.data.trigger)}</td><td>${e.data.outcome === 'response' ? 'Response' : e.data.outcome === 'timeout' ? 'Timed out' : e.data.outcome === 'incomplete' ? 'Incomplete' : 'No response'}</td><td class="n">${e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'}</td></tr>`).join('')}</tbody></table></div>`; }
+  if(INTERVAL_METHODS.includes(t.method)) extra = `<p class="small sub">Select a cell to correct its score. Changes are logged.</p>${stripHTML(r.cells, t, true, null)}`;
+  if(t.method === 'percent'){ const tr = Calc.events(s, t.id, 'trial'); if(tr.length) extra = `<div class="strip" aria-label="Trial sequence">${tr.map((e, i) => `<span class="cell ${e.data.result === 'correct' ? 'yes' : e.data.result === 'incorrect' ? 'no' : 'un'}" style="display:inline-flex;align-items:center;justify-content:center;width:auto;padding:0 6px" title="Trial ${i+1}: ${e.data.result}" role="img" aria-label="Trial ${i+1}: ${e.data.result}">${e.data.result === 'correct' ? '+' : e.data.result === 'incorrect' ? '–' : 'P'}</span>`).join('')}</div><div class="legend"><span>+ correct</span><span>P prompted</span><span>– incorrect</span></div>`; }
+  if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); extra = `<div class="tablewrap"><table><thead><tr><th>Step</th>${runs.map((_, i) => `<th>Run ${i+1}</th>`).join('')}<th class="n">Independent</th></tr></thead><tbody>${r.byStep.map((b, k) => `<tr><td>${k+1}. ${esc(b.name)}</td>${runs.map(e => `<td title="${esc(LEVEL_LABEL[e.data.scores[k]] || 'Not scored')}" class="mono">${esc(e.data.scores[k] || '·')}</td>`).join('')}<td class="n">${b.indep}/${b.scored}</td></tr>`).join('')}</tbody></table></div>`; }
+  if(t.method === 'abc') extra = abcTable(s, t);
+  return `<section class="panel" aria-label="${esc(t.name)}">
+    <header><div class="stack" style="gap:4px"><h2>${esc(t.name)}</h2><span class="row" style="gap:6px"><span class="chip acc">${m.label}</span>${t.goal?.text ? `<span class="chip">Goal: ${esc(t.goal.text)}</span>` : ''}</span></div>
+      <div style="text-align:right"><div class="mono" style="font-size:1.6rem;font-weight:600">${esc(r.big)}</div><div class="small sub">${esc(r.bigLabel)}</div></div></header>
+    <p class="small sub">${esc(t.definition)}</p>
+    <div class="tablewrap"><table><tbody>${r.rows.map(([k, v]) => `<tr><th scope="row" style="width:45%">${esc(k)}</th><td class="mono">${esc(v)}</td></tr>`).join('')}</tbody></table></div>
+    ${extra}
+  </section>`;
+}
+function abcTable(s, t){
+  const rows = Calc.events(s, t.id, 'abc');
+  if(!rows.length) return `<p class="sub">No ABC entries.</p>`;
+  const count = (field) => { const m = {}; rows.forEach(e => { const v = (e.data[field] || '—').trim(); m[v] = (m[v] || 0) + 1; }); return Object.entries(m).sort((a,b) => b[1] - a[1]); };
+  return `<div class="tablewrap"><table><thead><tr><th class="n">Time</th><th>Setting / context</th><th>Antecedent</th><th>Behavior</th><th>Consequence</th><th>Notes</th></tr></thead><tbody>
+    ${rows.map(e => `<tr><td class="n">${fmtClock(e.t)}<br><span class="small sub">${fmtWall(e.wall)}</span></td><td>${esc(e.data.context)}</td><td>${esc(e.data.antecedent)}</td><td>${esc(e.data.behavior)}</td><td>${esc(e.data.consequence)}</td><td>${esc(e.data.notes)}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="grid2" style="gap:12px"><div class="tablewrap"><table><thead><tr><th>Antecedents recorded</th><th class="n">Count</th></tr></thead><tbody>${count('antecedent').map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v}</td></tr>`).join('')}</tbody></table></div>
+  <div class="tablewrap"><table><thead><tr><th>Consequences recorded</th><th class="n">Count</th></tr></thead><tbody>${count('consequence').map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v}</td></tr>`).join('')}</tbody></table></div></div>
+  <p class="small sub">These counts describe what was recorded. They are not a functional assessment and do not identify why the behavior occurs.</p>`;
+}
+
+/* ---------- narrative summary text ---------- */
+function narrative(s){
+  const st = stuById(s.studentId); const obs = Calc.observedMs(s);
+  const parts = [`On ${fmtDate(s.date)}, ${st?.code} was observed during ${s.setting}${s.observer ? ` by ${s.observer}` : ''} for ${fmtDur(obs)} of observed time.`];
+  for(const t of s.targetIds.map(tgById).filter(Boolean)){
+    const r = Calc.summarize(s, t); const n = t.name;
+    switch(t.method){
+      case 'frequency': parts.push(`${n} occurred ${r.count} time${r.count === 1 ? '' : 's'} (${fmtNum(r.value, 2)} per minute).`); break;
+      case 'duration': parts.push(`${n} was observed in ${r.episodes} episode${r.episodes === 1 ? '' : 's'} totaling ${fmtDur(r.total)} (${fmtNum(r.value, 1)}% of observed time${r.episodes ? `; mean episode ${fmtDur(r.mean)}` : ''}).`); break;
+      case 'latency': parts.push(`${n}: across ${r.trials} instruction${r.trials === 1 ? '' : 's'}, a response followed ${r.responded} time${r.responded === 1 ? '' : 's'}${r.responded ? ` with a mean latency of ${fmtNum(r.value, 1)} seconds` : ''}${r.noResp ? `; ${r.noResp} had no response` : ''}${r.timeouts ? `; ${r.timeouts} timed out` : ''}.`); break;
+      case 'partial': case 'whole': case 'mts': parts.push(`Using ${METHODS[t.method].label.toLowerCase()} recording with ${r.L/1000}-second intervals, ${n.toLowerCase()} was scored "${INT_WORDS[t.method].yes.toLowerCase()}" in ${r.yes} of ${r.scored} scored intervals (${r.scored ? fmtNum(r.value, 1) : '—'}%)${r.unscored ? `; ${r.unscored} interval${r.unscored === 1 ? ' was' : 's were'} not scored and ${r.unscored === 1 ? 'is' : 'are'} excluded` : ''}.`); break;
+      case 'percent': parts.push(`${n}: ${r.c} of ${r.n} trials correct independently (${r.n ? fmtNum(r.value, 1) : '—'}%)${r.p ? `, plus ${r.p} correct with a prompt` : ''}.`); break;
+      case 'task': parts.push(`${n}: across ${r.runs} run${r.runs === 1 ? '' : 's'}, ${r.indep} of ${r.scored} steps were completed independently (${r.scored ? fmtNum(r.value, 1) : '—'}%).`); break;
+      case 'abc': parts.push(`${r.count} ABC entr${r.count === 1 ? 'y was' : 'ies were'} recorded for ${n.toLowerCase()}; antecedents and consequences are listed in the ABC table.`); break;
+    }
+  }
+  if(s.notes) parts.push(`Observer notes: ${s.notes}`);
+  return parts.join(' ');
+}
+
+/* =====================================================================
+   Charts (SVG)
+   ===================================================================== */
+const LIGHT = {ink:'#12222A', ink2:'#47595F', grid:'#D9E2E0', accent:'#0A6365', mark:'#8A4C00', bg:'#FFFFFF'};
+function niceMax(v){ if(!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+function trendChartSVG(points, {yLabel, goal, isPct, colors}){
+  // points: [{label, value}] ; uses css vars unless colors given (for PDF)
+  const C = colors || {ink:'var(--ink)', ink2:'var(--ink-2)', grid:'var(--chart-grid)', accent:'var(--accent)', mark:'var(--mark)', bg:'var(--surface)'};
+  const W = 680, H = 300, ml = 62, mr = 20, mt = 22, mb = 64;
+  const vals = points.map(p => p.value).filter(v => v != null);
+  let ymax = isPct ? 100 : niceMax(Math.max(...vals, goal ?? 0, 0) * 1.1);
+  const ticks = 5; const iw = W - ml - mr, ih = H - mt - mb;
+  const x = i => ml + (points.length === 1 ? iw/2 : i * iw / (points.length - 1));
+  const y = v => mt + ih - (v / ymax) * ih;
+  const font = colors ? 'font-family="Helvetica, Arial, sans-serif"' : '';
+  let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(yLabel)} by session date" ${font}>`;
+  if(colors) g += `<rect width="${W}" height="${H}" fill="${C.bg}"/>`;
+  for(let k = 0; k <= ticks; k++){ const v = ymax * k / ticks; const yy = y(v);
+    g += `<line x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}" stroke="${C.grid}" stroke-width="1"/>`;
+    g += `<text x="${ml - 8}" y="${yy + 4}" text-anchor="end" font-size="12" fill="${C.ink2}">${fmtNum(v, ymax < 2 ? 2 : (ymax < 10 ? 1 : 0))}</text>`; }
+  g += `<line x1="${ml}" x2="${ml}" y1="${mt}" y2="${mt + ih}" stroke="${C.ink2}"/><line x1="${ml}" x2="${W - mr}" y1="${mt + ih}" y2="${mt + ih}" stroke="${C.ink2}"/>`;
+  const step = Math.ceil(points.length / 10);
+  points.forEach((p, i) => { if(i % step === 0 || i === points.length - 1) g += `<text x="${x(i)}" y="${mt + ih + 18}" text-anchor="middle" font-size="12" fill="${C.ink2}">${esc(p.label)}</text>`; });
+  g += `<text x="${ml + iw/2}" y="${H - 14}" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700">Session date</text>`;
+  g += `<text transform="translate(16 ${mt + ih/2}) rotate(-90)" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700">${esc(yLabel)}</text>`;
+  if(goal != null && goal <= ymax){ const gy = y(goal); g += `<line x1="${ml}" x2="${W - mr}" y1="${gy}" y2="${gy}" stroke="${C.mark}" stroke-width="2" stroke-dasharray="6 5"/><text x="${W - mr}" y="${gy - 6}" text-anchor="end" font-size="12" fill="${C.mark}" font-weight="700">Goal ${fmtNum(goal, goal < 2 ? 2 : 1)}</text>`; }
+  // line with gaps for nulls
+  let path = '', pen = false;
+  points.forEach((p, i) => { if(p.value == null){ pen = false; return; } path += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.value).toFixed(1) + ' '; pen = true; });
+  g += `<path d="${path}" fill="none" stroke="${C.accent}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  points.forEach((p, i) => { if(p.value == null) return; const last = i === points.length - 1;
+    g += `<circle cx="${x(i)}" cy="${y(p.value)}" r="${last ? 6 : 4.5}" fill="${last ? C.accent : C.bg}" stroke="${C.accent}" stroke-width="2.5"><title>${esc(p.label)}: ${fmtNum(p.value, 2)}</title></circle>`; });
+  if(points.length) { const li = points.length - 1, lv = points[li].value; if(lv != null) g += `<text x="${Math.min(x(li), W - mr - 4)}" y="${y(lv) - 12}" text-anchor="end" font-size="12" font-weight="700" fill="${C.ink}">${fmtNum(lv, lv < 2 ? 2 : 1)}</text>`; }
+  return g + `</svg>`;
+}
+function cumulativeChart(s, t){
+  const obs = Calc.observedMs(s); const evs = Calc.events(s, t.id, 'count').map(e => e.t).sort((a,b) => a-b);
+  const W = 680, H = 220, ml = 50, mr = 16, mt = 16, mb = 48; const iw = W - ml - mr, ih = H - mt - mb;
+  const ymax = Math.max(1, niceMax(evs.length)); const x = v => ml + v / Math.max(obs, 1) * iw; const y = v => mt + ih - v / ymax * ih;
+  let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative count of ${esc(t.name)} across the session">`;
+  for(let k = 0; k <= 4; k++){ const v = ymax * k / 4; g += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--chart-grid)"/><text x="${ml - 6}" y="${y(v) + 4}" text-anchor="end" font-size="12">${fmtNum(v, 0)}</text>`; }
+  const mins = Math.ceil(obs / 60000); const st = Math.max(1, Math.ceil(mins / 8));
+  for(let mm = 0; mm <= mins; mm += st){ const xx = x(Math.min(mm * 60000, obs)); g += `<text x="${xx}" y="${mt + ih + 16}" text-anchor="middle" font-size="12">${mm}</text>`; }
+  g += `<text x="${ml + iw/2}" y="${H - 8}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--ink)">Observed time (minutes)</text>`;
+  g += `<text transform="translate(14 ${mt + ih/2}) rotate(-90)" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--ink)">Cumulative count</text>`;
+  let d = `M${x(0)} ${y(0)}`; evs.forEach((tt, i) => { d += ` L${x(tt)} ${y(i)} L${x(tt)} ${y(i+1)}`; }); d += ` L${x(obs)} ${y(evs.length)}`;
+  g += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+  g += `<line x1="${ml}" x2="${ml}" y1="${mt}" y2="${mt + ih}" stroke="var(--ink-2)"/><line x1="${ml}" x2="${W - mr}" y1="${mt + ih}" y2="${mt + ih}" stroke="var(--ink-2)"/>`;
+  return g + `</svg>`;
+}
+function seriesFor(t, sessions){
+  const list = sessions.filter(s => s.targetIds.includes(t.id)).slice().sort((a,b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+  return list.map(s => { const r = Calc.summarize(s, t); return {s, r, label: fmtDate(s.date, true), value: r.den > 0 || t.method === 'abc' ? r.value : null}; });
+}
+function graphTableRows(t, series){
+  const head = {frequency:['Count','Observed min','Rate per min'], duration:['Episodes','Total','% of observed'], latency:['Trials','Responses','Mean latency (s)'],
+    partial:['Occurred','Scored','Unscored','%'], whole:['Throughout','Scored','Unscored','%'], mts:['Occurring','Scored','Unscored','%'], percent:['Correct','Trials','Prompted','%'], task:['Independent','Scored steps','Runs','%'], abc:['Entries']}[t.method];
+  const row = ({r}) => { switch(t.method){
+    case 'frequency': return [r.count, fmtNum(r.obs/60000, 1), fmtNum(r.value, 2)];
+    case 'duration': return [r.episodes, fmtDur(r.total), fmtNum(r.value, 1)];
+    case 'latency': return [r.trials, r.responded, fmtNum(r.value, 1)];
+    case 'partial': case 'whole': case 'mts': return [r.yes, r.scored, r.unscored, fmtNum(r.value, 1)];
+    case 'percent': return [r.c, r.n, r.p, fmtNum(r.value, 1)];
+    case 'task': return [r.indep, r.scored, r.runs, fmtNum(r.value, 1)];
+    case 'abc': return [r.count]; } };
+  return {head, rows: series.map(p => [fmtDate(p.s.date), p.s.setting, p.s.observer, ...row(p)])};
+}
+
+/* =====================================================================
+   View: Graphs
+   ===================================================================== */
+function viewGraphs(){
+  const f = S.ui.filters;
+  let t = f.target ? tgById(f.target) : null;
+  if(!t){ const cand = S.targets.filter(x => (!f.student || x.studentId === f.student) && !x.archived); t = cand[0] || null; }
+  const list = filtered().filter(s => !t || s.targetIds.includes(t.id));
+  const series = t ? seriesFor(t, list) : [];
+  const view = S.ui.graph?.view || 'chart';
+  const agg = t ? Calc.aggregate(t, list) : null;
+  const tbl = t ? graphTableRows(t, series) : null;
+  return `
+  <section class="stack" style="gap:4px"><h1>Graphs</h1><p class="sub">Progress for one target across sessions. Pick a student and target.</p></section>
+  <section class="panel" aria-labelledby="gfT"><header><h2 id="gfT">Filter</h2></header>${filterBar('g')}</section>
+  ${t ? `<section class="panel" aria-labelledby="gT">
+    <header><div class="stack" style="gap:2px"><span class="eyebrow mono">${esc(stuById(t.studentId)?.code)} · ${METHODS[t.method].label}</span><h2 id="gT">${esc(t.name)}</h2></div>
+      <div class="row"><div class="seg" role="group" aria-label="View as"><button data-act="gview" data-v="chart" aria-pressed="${view === 'chart'}" id="gvChart">Chart</button><button data-act="gview" data-v="table" aria-pressed="${view === 'table'}" id="gvTable">Table</button></div>
+      <button class="sm primary" data-act="pdfProgress" data-id="${t.id}" id="btnPdfProg" ${series.length ? '' : 'disabled'}>PDF report</button></div></header>
+    ${!f.target ? `<p class="small sub">Showing the first target for this filter. Choose a target above to switch.</p>` : ''}
+    ${series.length ? (view === 'chart' ? `<div class="chart">${trendChartSVG(series, {yLabel: METHODS[t.method].axis, goal: t.goal?.value ?? null, isPct: ['partial','whole','mts','percent','task'].includes(t.method)})}</div>`
+      : `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Setting</th><th>Observer</th>${tbl.head.map(h => `<th class="n">${esc(h)}</th>`).join('')}</tr></thead><tbody>${tbl.rows.map(r => `<tr>${r.map((c, i) => `<td class="${i > 2 ? 'n' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`)
+      : `<div class="empty">No completed sessions for this target match the filters.</div>`}
+    ${agg && agg.sessions ? `<div class="notice"><div><b>Across ${agg.sessions} session${agg.sessions === 1 ? '' : 's'}:</b> <span class="mono">${fmtNum(agg.value, 2)}</span> ${esc(t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit)}<br><span class="small sub">Weighted: ${esc(agg.note)}. Session percentages are not averaged.</span></div></div>` : ''}
+  </section>` : `<div class="empty">No targets match. Add targets in Students.</div>`}`;
+}
+
+/* =====================================================================
+   View: About / readiness
+   ===================================================================== */
+function viewAbout(){
+  return `
+  <section class="stack" style="gap:4px"><h1>About this prototype</h1><p class="sub">Sightline was built by a practitioner with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
+  <div class="grid2">
+    <section class="panel"><header><h2>How your data is handled here</h2></header>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+        <li>All data is saved only in this browser on this device. Nothing is sent to a server, and the app has no AI features at run time.</li>
+        <li>The offline version runs without an internet connection. Its PDF reports use your device's print dialog: choose "Save as PDF".</li>
+        <li>Clearing browser data, a private window, or a different device means the data is not there. Use Sessions → Save backup.</li>
+        <li>Students are codes only. The app never asks for names, birth dates, or ID numbers, and warns if a code looks like one.</li>
+        <li>This prototype is for fictional students and mock observations. It is not FERPA or HIPAA compliant and has not been reviewed by any district.</li>
+      </ul></section>
+    <section class="panel"><header><h2>Calculation rules</h2></header>
+      <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+        <li>Rates use observed time only. Paused time is excluded from every timer, rate, and interval.</li>
+        <li>Interval percentages are scored "yes" ÷ scored intervals. Unscored intervals are shown separately and never counted as absent.</li>
+        <li>Latency means use responses only. No-response, timeout, and incomplete trials are reported as counts.</li>
+        <li>Percent correct counts prompted trials in the denominator but not the independent numerator.</li>
+        <li>Totals across sessions add up numerators and denominators. Session percentages are never averaged.</li>
+        <li>ABC data is listed and counted, never labeled with a behavioral function.</li>
+      </ul></section>
+  </div>
+  <section class="panel"><header><h2>Before any real student data is used</h2></header>
+    <p class="sub">A district-approved version would need at least the following. Each item needs sign-off from the district's technology, privacy, and legal staff.</p>
+    <div class="tablewrap"><table><thead><tr><th>Need</th><th>What it means</th></tr></thead><tbody>
+      <tr><td>District review</td><td>Privacy and security review, approval under district AI and software policies, and inclusion in the approved-apps list.</td></tr>
+      <tr><td>Data protection agreement</td><td>A signed agreement covering any hosting or vendor (for example a state student data privacy agreement), or hosting fully inside the district's Google Workspace or Microsoft 365 tenant under its existing agreement.</td></tr>
+      <tr><td>Authentication</td><td>District single sign-on so only staff accounts can open the app.</td></tr>
+      <tr><td>Role-based access</td><td>Staff see only their own caseload; supervisors and team members see what their role allows.</td></tr>
+      <tr><td>Encryption</td><td>Encrypted storage at rest (including on devices) and HTTPS for anything transmitted.</td></tr>
+      <tr><td>Audit logs</td><td>Who viewed, created, changed, exported, or deleted each record, and when.</td></tr>
+      <tr><td>Retention and deletion</td><td>Rules for how long observation data is kept, how it is deleted, and how exports are handled.</td></tr>
+      <tr><td>Offline sync safeguards</td><td>Encrypted local cache, conflict handling, and remote wipe for lost devices.</td></tr>
+      <tr><td>Records integration</td><td>A plan for how summaries become part of the educational record and how parents can access them.</td></tr>
+      <tr><td>Accessibility and reliability testing</td><td>Formal WCAG 2.1 AA audit, interobserver agreement checks, and backup procedures.</td></tr>
+    </tbody></table></div></section>
+  <section class="panel"><header><h2>Install on a device</h2></header>
+    <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+      <li><b>iPhone or iPad:</b> open this page in Safari, tap the Share button, then <b>Add to Home Screen</b>. Always open Sightline from the home screen icon. Data in the icon app and in a Safari tab are kept separately.</li>
+      <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
+      <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
+      <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
+    </ul><p class="small sub">Version 1.0.0-2026-10-24</p></section>
+  <section class="panel"><header><h2>Reset</h2></header>
+    <div class="row"><button data-act="resetDemo" id="btnResetDemo">Reload demo data</button><button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
+    <p class="small sub">Reloading demo data replaces the demo students but keeps students you added.</p></section>`;
+}
+
+/* =====================================================================
+   CSV
+   ===================================================================== */
+function csvCell(v){ let s = v == null ? '' : String(v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
+function toCSV(rows){ return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
+function summaryRows(sessions, onlyTarget){
+  const rows = [['session_id','student_code','date','start_time','setting','observer','observed_minutes','target','method','operational_definition','numerator','denominator','value','unit','calculation','unscored_intervals','session_notes']];
+  for(const s of sessions) for(const t of s.targetIds.map(tgById).filter(Boolean)){
+    if(onlyTarget && t.id !== onlyTarget) continue;
+    const r = Calc.summarize(s, t); const calc = (r.rows.find(x => /Calculation|Percent/.test(x[0])) || ['', ''])[1];
+    rows.push([s.id, stuById(s.studentId)?.code, s.date, s.startTime, s.setting, s.observer, fmtNum(r.obs/60000, 2), t.name, METHODS[t.method].label, t.definition,
+      r.num == null ? '' : (t.method === 'duration' ? fmtNum(r.num/1000, 1) + ' s' : fmtNum(r.num, t.method === 'latency' ? 1 : 0)),
+      r.den == null ? '' : (t.method === 'frequency' ? fmtNum(r.den, 2) + ' min' : t.method === 'duration' ? fmtNum(r.den/1000, 1) + ' s' : String(r.den)),
+      r.value == null ? '' : fmtNum(r.value, 2), t.method === 'abc' ? 'entries' : METHODS[t.method].unit, calc, r.unscored ?? '', s.notes]);
+  }
+  return rows;
+}
+function eventRows(sessions, onlyTarget){
+  const rows = [['session_id','student_code','date','setting','observer','target','method','entry_type','session_time_sec','clock_time','status','edits','interval_number','score_or_result','duration_sec','latency_sec','outcome','task_steps','context','antecedent','behavior','consequence','notes','description']];
+  for(const s of sessions){
+    for(const e of s.events.slice().sort((a,b) => a.t - b.t)){
+      if(onlyTarget && e.targetId !== onlyTarget) continue;
+      const t = tgById(e.targetId); const d = e.data;
+      rows.push([s.id, stuById(s.studentId)?.code, s.date, s.setting, s.observer, t?.name, t ? METHODS[t.method].label : '', e.type, fmtNum(e.t/1000, 1), new Date(e.wall).toISOString(), e.voided ? 'voided' : 'active', e.history.length,
+        e.type === 'interval' ? d.index + 1 : '', e.type === 'interval' ? (d.value || 'unscored') : e.type === 'trial' ? d.result : '',
+        e.type === 'episode' ? fmtNum((d.end - d.start)/1000, 1) : '', e.type === 'latency' && d.outcome === 'response' ? fmtNum((d.response - d.trigger)/1000, 1) : '',
+        e.type === 'latency' ? d.outcome : '', e.type === 'ta_run' ? (d.steps || []).map((st, i) => `${st}: ${LEVEL_LABEL[d.scores[i]] || 'not scored'}`).join(' | ') : '',
+        d.context || '', d.antecedent || '', d.behavior || '', d.consequence || '', d.notes || '', describeEvent(e)]);
+    }
+  }
+  return rows;
+}
+const stamp = () => todayISO().replace(/-/g, '');
+
+/* =====================================================================
+   PDF (jsPDF)
+   ===================================================================== */
+function svgToPng(svg, w = 1360, h = 600){
+  return new Promise((res, rej) => { const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/png')); };
+    img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+function pdfBase(title){
+  if(!window.jspdf || !window.jspdf.jsPDF){ toast('The PDF library did not load. Check your connection and reload.'); return null; }
+  const doc = new window.jspdf.jsPDF({unit:'pt', format:'letter'});
+  if(typeof doc.autoTable !== 'function'){ toast('The PDF table library did not load. Reload and try again.'); return null; }
+  const W = doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(18, 34, 42); doc.text(title, 48, 56);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(138, 76, 0);
+  doc.text('PROTOTYPE — fictional data only. Not for use with real student records.', 48, 72);
+  doc.setDrawColor(198, 210, 207); doc.line(48, 80, W - 48, 80);
+  return {doc, W, y:96};
+}
+function pdfH(ctx, text, size = 12){ const {doc} = ctx; if(ctx.y > 700){ doc.addPage(); ctx.y = 56; } doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.setTextColor(18, 34, 42); doc.text(text, 48, ctx.y); ctx.y += size + 6; }
+function pdfP(ctx, text, size = 9.5, color = [71, 89, 95]){ const {doc, W} = ctx; doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(...color); const ls = doc.splitTextToSize(String(text), W - 96); for(const l of ls){ if(ctx.y > 740){ doc.addPage(); ctx.y = 56; } doc.text(l, 48, ctx.y); ctx.y += size * 1.35; } ctx.y += 4; }
+function pdfTable(ctx, head, body, opts = {}){ ctx.doc.autoTable({startY:ctx.y, head: head ? [head] : undefined, body, margin:{left:48, right:48}, styles:{fontSize:8.5, cellPadding:4, textColor:[18,34,42], lineColor:[198,210,207], lineWidth:0.5}, headStyles:{fillColor:[229,236,234], textColor:[18,34,42], fontStyle:'bold'}, theme:'grid', ...opts}); ctx.y = ctx.doc.lastAutoTable.finalY + 14; }
+async function pdfChart(ctx, svg){ try { const png = await svgToPng(svg); if(ctx.y > 520){ ctx.doc.addPage(); ctx.y = 56; } const w = ctx.W - 96, h = w * 300/680; ctx.doc.addImage(png, 'PNG', 48, ctx.y, w, h); ctx.y += h + 12; } catch(e){ pdfP(ctx, '(Chart could not be drawn in this browser; see the table.)'); } }
+function pdfFooter(doc){ const n = doc.getNumberOfPages(); for(let i = 1; i <= n; i++){ doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 89, 95); doc.text(`Generated by Sightline (prototype) on ${new Date().toLocaleString()}. Data are descriptive and require professional interpretation.`, 48, 770); doc.text(`Page ${i} of ${n}`, doc.internal.pageSize.getWidth() - 48, 770, {align:'right'}); } }
+/* ---------- Offline reports: printable page -> device "Save as PDF" ---------- */
+const canPrintFallback = () => !window.jspdf && !isViewer();
+const hT = (head, rows, kv) => `<table>${head ? `<thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>` : ''}<tbody>${rows.map(r => `<tr>${r.map((c, i) => kv && i === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+function printReport(title, body){
+  let el = document.getElementById('printArea');
+  if(!el){ el = document.createElement('div'); el.id = 'printArea'; document.body.appendChild(el); }
+  el.innerHTML = `<h1>${esc(title)}</h1><div class="pnote">Prototype — fictional data only. Not for use with real student records.</div>${body}
+    <div class="foot">Generated by Sightline (prototype) on ${esc(new Date().toLocaleString())}. Data are descriptive and require professional interpretation.</div>`;
+  toast('In the print window, choose "Save as PDF" as the printer.');
+  setTimeout(() => { try { window.print(); } catch(e){ toast('Printing is not available here.'); } }, 150);
+}
+function sessionReportHTML(s){
+  const st = stuById(s.studentId);
+  let h = hT(null, [['Student code', st?.code || ''], ['Date and start time', `${fmtDate(s.date)}, ${fmtTime12(s.startTime)}`], ['Setting', s.setting], ['Observer', s.observer || '—'], ['Observed time', `${fmtDur(Calc.observedMs(s))}${s.segments.length > 1 ? ' (paused time excluded)' : ''}`]], true);
+  h += `<h2>Summary</h2><p>${esc(narrative(s))}</p>`;
+  for(const t of s.targetIds.map(tgById).filter(Boolean)){
+    const r = Calc.summarize(s, t);
+    h += `<div class="target"><h2>${esc(t.name)} — ${esc(METHODS[t.method].label)}</h2><p class="muted">Definition: ${esc(t.definition)}${t.goal?.text ? ` · Goal: ${esc(t.goal.text)}` : ''}</p>${hT(null, r.rows, true)}`;
+    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; h += `<p class="muted">Interval record (+ ${esc(w.yes)}, – ${esc(w.no)}, ? not scored): ${r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')}</p>`; }
+    if(t.method === 'abc'){ const rows = Calc.events(s, t.id, 'abc'); if(rows.length) h += hT(['Time','Context','Antecedent','Behavior','Consequence','Notes'], rows.map(e => [fmtClock(e.t), e.data.context, e.data.antecedent, e.data.behavior, e.data.consequence, e.data.notes])); h += `<p class="muted">ABC entries are descriptive records. They do not identify the function of the behavior.</p>`; }
+    if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) h += hT(['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
+    if(t.method === 'duration'){ const eps = Calc.events(s, t.id, 'episode'); if(eps.length) h += hT(['#','Start','End','Duration'], eps.map((e, i) => [i+1, fmtClock(e.data.start), fmtClock(e.data.end), fmtDur(e.data.end - e.data.start)])); }
+    if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); h += hT(['Step', ...runs.map((_, i) => `Run ${i+1}`), 'Independent'], r.byStep.map((b, k) => [`${k+1}. ${b.name}`, ...runs.map(e => LEVEL_LABEL[e.data.scores[k]] || '—'), `${b.indep}/${b.scored}`])); }
+    const hist = seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
+    if(hist.length >= 2) h += `<h3>Trend through this session</h3>` + trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT});
+    h += `</div>`;
+  }
+  const evs = s.events.slice().sort((a,b) => a.t - b.t);
+  if(evs.length) h += `<h2>Timeline</h2>` + hT(['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), tgById(e.targetId)?.name || '', describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]));
+  if(s.notes) h += `<h2>Notes</h2><p>${esc(s.notes)}</p>`;
+  return h;
+}
+function progressReportHTML(t, list, series){
+  const st = stuById(t.studentId); const f = S.ui.filters;
+  let h = hT(null, [['Student code', st?.code || ''], ['Target', `${t.name} (${METHODS[t.method].label})`], ['Definition', t.definition], ['Goal', t.goal?.text || '—'],
+    ['Sessions', `${series.length} (${fmtDate(series[0].s.date)} to ${fmtDate(series[series.length-1].s.date)})`], ['Filters', [f.setting && `Setting: ${f.setting}`, f.observer && `Observer: ${f.observer}`, f.from && `From ${f.from}`, f.to && `To ${f.to}`].filter(Boolean).join('; ') || 'None']], true);
+  h += trendChartSVG(series, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT});
+  const tbl = graphTableRows(t, series); h += hT(['Date','Setting','Observer', ...tbl.head], tbl.rows);
+  const agg = Calc.aggregate(t, list);
+  h += `<p>Across ${agg.sessions} sessions: ${fmtNum(agg.value, 2)} ${esc(t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit)}. Weighted calculation: ${esc(agg.note)}. Session percentages are not averaged.</p>`;
+  return h;
+}
+
+async function pdfSession(id){
+  const s = sesById(id); if(!s) return; const st = stuById(s.studentId);
+  if(canPrintFallback()){ printReport('Behavior Observation Summary', sessionReportHTML(s)); return; }
+  const ctx = pdfBase('Behavior Observation Summary'); if(!ctx) return;
+  toast('Building PDF…');
+  pdfTable(ctx, null, [['Student code', st?.code || ''], ['Date and start time', `${fmtDate(s.date)}, ${fmtTime12(s.startTime)}`], ['Setting', s.setting], ['Observer', s.observer || '—'], ['Observed time', `${fmtDur(Calc.observedMs(s))}${s.segments.length > 1 ? ' (paused time excluded)' : ''}`]], {columnStyles:{0:{fontStyle:'bold', cellWidth:140}}});
+  pdfH(ctx, 'Summary'); pdfP(ctx, narrative(s), 9.5, [18,34,42]);
+  for(const t of s.targetIds.map(tgById).filter(Boolean)){
+    const r = Calc.summarize(s, t);
+    pdfH(ctx, `${t.name} — ${METHODS[t.method].label}`, 11.5);
+    pdfP(ctx, `Definition: ${t.definition}${t.goal?.text ? `   Goal: ${t.goal.text}` : ''}`);
+    pdfTable(ctx, null, r.rows, {columnStyles:{0:{fontStyle:'bold', cellWidth:200}}});
+    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; pdfP(ctx, 'Interval record (+ ' + w.yes + ', – ' + w.no + ', ? not scored): ' + r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')); }
+    if(t.method === 'abc'){ const rows = Calc.events(s, t.id, 'abc'); if(rows.length) pdfTable(ctx, ['Time','Context','Antecedent','Behavior','Consequence','Notes'], rows.map(e => [fmtClock(e.t), e.data.context, e.data.antecedent, e.data.behavior, e.data.consequence, e.data.notes])); pdfP(ctx, 'ABC entries are descriptive records. They do not identify the function of the behavior.'); }
+    if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) pdfTable(ctx, ['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
+    if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); pdfTable(ctx, ['Step', ...runs.map((_, i) => `Run ${i+1}`), 'Independent'], r.byStep.map((b, k) => [`${k+1}. ${b.name}`, ...runs.map(e => LEVEL_LABEL[e.data.scores[k]] || '—'), `${b.indep}/${b.scored}`])); }
+    const hist = seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
+    if(hist.length >= 2){ pdfP(ctx, `Trend for ${t.name} through this session:`); await pdfChart(ctx, trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT})); }
+  }
+  const evs = s.events.slice().sort((a,b) => a.t - b.t);
+  if(evs.length){ pdfH(ctx, 'Timeline'); pdfTable(ctx, ['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), tgById(e.targetId)?.name || '', describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]), {styles:{fontSize:7.5, cellPadding:3}}); }
+  if(s.notes){ pdfH(ctx, 'Notes'); pdfP(ctx, s.notes); }
+  pdfFooter(ctx.doc);
+  const blob = ctx.doc.output('blob');
+  await saveFile(`observation_${st?.code || 'student'}_${s.date}.pdf`, blob, 'application/pdf');
+}
+async function pdfProgress(tid){
+  const t = tgById(tid); if(!t) return; const st = stuById(t.studentId);
+  const list = filtered().filter(s => s.targetIds.includes(t.id)); const series = seriesFor(t, list); if(!series.length) return;
+  if(canPrintFallback()){ printReport('Progress Report', progressReportHTML(t, list, series)); return; }
+  const ctx = pdfBase('Progress Report'); if(!ctx) return;
+  toast('Building PDF…');
+  const f = S.ui.filters;
+  pdfTable(ctx, null, [['Student code', st?.code || ''], ['Target', `${t.name} (${METHODS[t.method].label})`], ['Definition', t.definition], ['Goal', t.goal?.text || '—'],
+    ['Sessions', `${series.length} (${fmtDate(series[0].s.date)} to ${fmtDate(series[series.length-1].s.date)})`], ['Filters', [f.setting && `Setting: ${f.setting}`, f.observer && `Observer: ${f.observer}`, f.from && `From ${f.from}`, f.to && `To ${f.to}`].filter(Boolean).join('; ') || 'None']], {columnStyles:{0:{fontStyle:'bold', cellWidth:120}}});
+  await pdfChart(ctx, trendChartSVG(series, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT}));
+  const tbl = graphTableRows(t, series); pdfTable(ctx, ['Date','Setting','Observer', ...tbl.head], tbl.rows);
+  const agg = Calc.aggregate(t, list); pdfP(ctx, `Across ${agg.sessions} sessions: ${fmtNum(agg.value, 2)} ${t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit}. Weighted calculation: ${agg.note}. Session percentages are not averaged.`, 9.5, [18,34,42]);
+  pdfFooter(ctx.doc);
+  await saveFile(`progress_${st?.code || 'student'}_${t.name.replace(/\W+/g, '_')}_${stamp()}.pdf`, ctx.doc.output('blob'), 'application/pdf');
+}
+
+/* =====================================================================
+   Event editing dialog
+   ===================================================================== */
+function editEventDialog(s, e){
+  const t = tgById(e.targetId); const d = e.data;
+  let fields = '';
+  switch(e.type){
+    case 'count': fields = `<p class="sub">An occurrence has no values to change. Void it if it was recorded by mistake.</p><label class="f">Note<input type="text" name="notes" id="edNotes" value="${esc(d.notes || '')}"></label>`; break;
+    case 'episode': fields = `<div class="fields"><label class="f">Start (m:ss session time)<input type="text" name="start" id="edStart" value="${fmtClock(d.start)}" required></label><label class="f">End (m:ss)<input type="text" name="end" id="edEnd" value="${fmtClock(d.end)}" required></label></div>`; break;
+    case 'latency': fields = `<label class="f">Outcome<select name="outcome" id="edOutcome">${['response','no_response','timeout','incomplete'].map(o => `<option value="${o}" ${d.outcome === o ? 'selected' : ''}>${{response:'Response', no_response:'No response', timeout:'Timed out', incomplete:'Incomplete'}[o]}</option>`).join('')}</select></label>
+      <label class="f">Latency in seconds (responses only)<input type="number" step="0.1" min="0" name="lat" id="edLat" value="${d.outcome === 'response' ? fmtNum((d.response - d.trigger)/1000, 1) : ''}"></label>`; break;
+    case 'interval': { const w = INT_WORDS[t.method]; fields = `<fieldset><legend>Interval ${d.index+1}</legend>${[['yes', w.yes], ['no', w.no], ['', 'Not scored']].map(([v, l]) => `<label class="check"><input type="radio" name="value" value="${v}" ${(d.value || '') === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>`; break; }
+    case 'trial': fields = `<fieldset><legend>Result</legend>${[['correct','Correct'], ['prompted','Correct with prompt'], ['incorrect','Incorrect']].map(([v, l]) => `<label class="check"><input type="radio" name="result" value="${v}" ${d.result === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>`; break;
+    case 'ta_run': fields = (d.steps || t.config.steps || []).map((stp, k) => `<label class="f">${k+1}. ${esc(stp)}<select name="s${k}" id="edS${k}"><option value="">Not scored</option>${LEVELS.map(l => `<option value="${l.k}" ${d.scores[k] === l.k ? 'selected' : ''}>${l.label}</option>`).join('')}</select></label>`).join(''); break;
+    case 'abc': fields = ['context','antecedent','behavior','consequence','notes'].map(k => `<label class="f">${k[0].toUpperCase() + k.slice(1)}<input type="text" name="${k}" id="ed_${k}" value="${esc(d[k] || '')}"></label>`).join(''); break;
+  }
+  openDialog({title:`Edit entry · ${t?.name || ''}`,
+    body:`<p class="small sub">Recorded at ${fmtClock(e.t)} session time (${new Date(e.wall).toLocaleString()}). The original time stays the same, and this change is added to the entry's history.</p>${fields}
+      <label class="f">Reason for change (optional)<input type="text" name="reason" id="edReason" placeholder="e.g. Tapped wrong button"></label><p class="fieldwarn" id="edErr" role="alert"></p>`,
+    actions:[{label:'Cancel'}, {label:'Save change', kind:'primary', submit:true}],
+    onSubmit: fd => {
+      const reason = fd.get('reason'); let nd = {};
+      switch(e.type){
+        case 'count': nd = {notes: fd.get('notes') || ''}; break;
+        case 'episode': { const a = parseClock(fd.get('start')), b = parseClock(fd.get('end')); if(a == null || b == null || b <= a){ $('#edErr').textContent = 'Enter start and end as m:ss, with the end after the start.'; return false; } nd = {start:a, end:b}; break; }
+        case 'latency': { const o = fd.get('outcome'); if(o === 'response'){ const l = parseFloat(fd.get('lat')); if(!(l >= 0)){ $('#edErr').textContent = 'Enter the latency in seconds for a response.'; return false; } nd = {outcome:o, response: d.trigger + Math.round(l*1000)}; } else nd = {outcome:o, response:null}; break; }
+        case 'interval': nd = {value: fd.get('value') || null}; break;
+        case 'trial': nd = {result: fd.get('result')}; break;
+        case 'ta_run': nd = {scores: d.scores.map((_, k) => fd.get('s' + k) || null)}; break;
+        case 'abc': ['context','antecedent','behavior','consequence','notes'].forEach(k => nd[k] = fd.get(k) || ''); break;
+      }
+      if(editEvent(e, nd, reason)){ toast('Change saved with history'); } else toast('No changes');
+      render();
+    }});
+}
+
+/* =====================================================================
+   Actions
+   ===================================================================== */
+const A = {
+  goLive(){ go('live'); }, goObserve(){ go('observe'); }, goStudents(){ go('students'); }, goSessions(){ go('sessions'); },
+  quickTpl(el){ quickTpl = +el.dataset.i; const t = TEMPLATES[quickTpl]; $('#qName').value = t.name; $('#qDef').value = t.def; $('#qMethod').value = t.method; $('#qInt').value = t.intervalSec || 10; $$('[data-act="quickTpl"]').forEach(b => b.setAttribute('aria-pressed', b === el)); },
+  planDemo(){ S.ui.planStudent = 'stu_demo1'; S.ui.planSetting = 'Mock observation – demo'; render(); toast('Demo student selected with every target'); },
+  pause(){ pauseSession(liveSession()); }, resume(){ resumeSession(liveSession()); }, undo(){ undoLast(liveSession()); },
+  end(){ const s = liveSession(); confirmDialog('End observation?', 'Timers stop and any running duration timer is closed at the current time. You can still edit entries afterward.', 'End observation', () => endSession(s), false); },
+  count(el){ const s = liveSession(); record(s, el.dataset.t, 'count', {}); render(); },
+  undoTarget(el){ const s = liveSession(); const tid = el.dataset.t; const t = tgById(tid);
+    const type = {frequency:'count', duration:'episode', latency:'latency', percent:'trial'}[t.method];
+    const last = Calc.events(s, tid, type).sort((a,b) => a.wall - b.wall).pop(); if(!last) return;
+    voidEvent(last, 'Undone during session'); undoStack = undoStack.filter(u => u.evId !== last.id); render(); toast('Last entry undone'); },
+  durToggle(el){ const s = liveSession(); const tid = el.dataset.t; s.running = s.running || {};
+    if(s.running[tid]){ const r = s.running[tid]; const end = Calc.observedMs(s); delete s.running[tid]; record(s, tid, 'episode', {start:r.t, end}, r.t, r.wall); }
+    else { s.running[tid] = {t:Calc.observedMs(s), wall:Date.now()}; save(); }
+    render(); },
+  latTrig(el){ const s = liveSession(); s.latencyPending = s.latencyPending || {}; s.latencyPending[el.dataset.t] = {t:Calc.observedMs(s), wall:Date.now()}; save(); render(); },
+  latResp(el){ const s = liveSession(); const tid = el.dataset.t; const p = s.latencyPending[tid]; if(!p) return; delete s.latencyPending[tid]; record(s, tid, 'latency', {trigger:p.t, response:Calc.observedMs(s), outcome:'response'}, p.t, p.wall); render(); },
+  latNR(el){ const s = liveSession(); const tid = el.dataset.t; const p = s.latencyPending[tid]; if(!p) return; delete s.latencyPending[tid]; record(s, tid, 'latency', {trigger:p.t, response:null, outcome:'no_response'}, p.t, p.wall); render(); },
+  intCur(el){ const s = liveSession(); const t = tgById(el.dataset.t); const idx = Math.floor(Calc.observedMs(s) / (t.config.intervalSec * 1000)); scoreInterval(s, t, idx, el.dataset.v || null, 'Changed during session'); render(); },
+  intScore(el){ const s = liveSession(); const t = tgById(el.dataset.t); scoreInterval(s, t, +el.dataset.k, el.dataset.v); render(); },
+  intSkip(el){ // record an explicit "unscored" so the prompt goes away but the interval still counts as not scored
+    const s = liveSession(); const t = tgById(el.dataset.t); const k = +el.dataset.k;
+    if(!s.events.find(e => e.targetId === t.id && e.type === 'interval' && e.data.index === k && !e.voided)) record(s, t.id, 'interval', {index:k, value:null, skipped:true});
+    render(); },
+  intCycle(el){ const s = route.view === 'session' ? sesById(route.id) : liveSession(); const t = tgById(el.dataset.t); const k = +el.dataset.k;
+    const cur = Calc.intervalMap(s, t.id)[k] || null; const next = cur === 'yes' ? 'no' : cur === 'no' ? null : 'yes';
+    const ev = s.events.find(e => e.targetId === t.id && e.type === 'interval' && e.data.index === k && !e.voided);
+    if(ev) scoreInterval(s, t, k, next, s.status === 'ended' ? 'Corrected in review' : 'Changed during session');
+    else { const ne = mkEvent(t.id, 'interval', s.status === 'ended' ? (k+1) * t.config.intervalSec * 1000 : Calc.observedMs(s), {index:k, value:next}); if(s.status === 'ended') ne.history.push({at:Date.now(), action:'added', reason:'Scored in review after the session'}); s.events.push(ne); if(s.status !== 'ended') undoStack.push({kind:'add', evId:ne.id, label:`Interval ${k+1}`}); save(); }
+    render(); const b = document.getElementById(`c_${t.id}_${k}`); b && b.focus(); },
+  trial(el){ const s = liveSession(); record(s, el.dataset.t, 'trial', {result:el.dataset.v}); render(); },
+  taStart(el){ const s = liveSession(); const t = tgById(el.dataset.t); s.taRun = s.taRun || {}; s.taRun[t.id] = {t:Calc.observedMs(s), wall:Date.now(), scores:(t.config.steps || []).map(() => null)}; save(); render(); },
+  taScore(el){ const s = liveSession(); const r = s.taRun[el.dataset.t]; const k = +el.dataset.k; r.scores[k] = r.scores[k] === el.dataset.v ? null : el.dataset.v; save(); render(); },
+  taFinish(el){ const s = liveSession(); const t = tgById(el.dataset.t); const r = s.taRun[t.id]; if(!r.scores.some(Boolean)){ toast('Score at least one step first'); return; } delete s.taRun[t.id]; record(s, t.id, 'ta_run', {scores:r.scores, steps:(t.config.steps || []).slice()}, r.t, r.wall); render(); toast('Run saved'); },
+  taDiscard(el){ const s = liveSession(); confirmDialog('Discard this run?', 'The step scores for this run will not be saved.', 'Discard run', () => { delete s.taRun[el.dataset.t]; save(); render(); }); },
+  abcMark(el){ const s = liveSession(); const t = tgById(el.dataset.t); s.abcDraft = s.abcDraft || {}; s.abcDraft[t.id] = {t:Calc.observedMs(s), wall:Date.now(), context:s.setting, antecedent:'', behavior:'', consequence:'', notes:''}; save(); render(); const f = document.getElementById(`abc_${t.id}_antecedent`); f && f.focus(); },
+  abcChip(el){ const s = liveSession(); const d = s.abcDraft[el.dataset.t]; const f = el.dataset.field; d[f] = d[f] === el.dataset.v ? '' : el.dataset.v; save(); render(); },
+  abcSave(el){ const s = liveSession(); const tid = el.dataset.t; const d = s.abcDraft[tid]; if(!d.behavior && !d.antecedent && !d.consequence){ toast('Add at least the behavior before saving'); return; } delete s.abcDraft[tid]; record(s, tid, 'abc', {context:d.context, antecedent:d.antecedent, behavior:d.behavior, consequence:d.consequence, notes:d.notes}, d.t, d.wall); render(); toast('ABC entry saved'); },
+  abcCancel(el){ const s = liveSession(); delete s.abcDraft[el.dataset.t]; save(); render(); },
+
+  selStudent(el){ S.ui.selStudent = el.dataset.id; editingTarget = null; formMethod = null; save(); render(); },
+  newStudent(){ studentDialog(null); }, editStudent(el){ studentDialog(stuById(el.dataset.id)); },
+  delStudent(el){ const st = stuById(el.dataset.id); const ns = S.sessions.filter(s => s.studentId === st.id).length;
+    if(liveSession()?.studentId === st.id){ toast('End the live observation for this student first.'); return; }
+    confirmDialog(`Delete ${st.code}?`, `This permanently deletes the student, ${S.targets.filter(t => t.studentId === st.id).length} target(s), and ${ns} session(s). This cannot be undone. Consider saving a backup first.`, 'Delete permanently', () => {
+      S.sessions = S.sessions.filter(s => s.studentId !== st.id); S.targets = S.targets.filter(t => t.studentId !== st.id); S.students = S.students.filter(s => s.id !== st.id);
+      if(S.ui.selStudent === st.id) S.ui.selStudent = ''; if(S.ui.filters.student === st.id) S.ui.filters.student = ''; save(); render(); toast('Student deleted'); }); },
+  newTarget(){ editingTarget = 'new'; formMethod = null; render(); $('#tName')?.focus(); },
+  editTarget(el){ editingTarget = el.dataset.id; formMethod = null; render(); $('#tName')?.focus(); },
+  cancelTarget(){ editingTarget = null; formMethod = null; render(); },
+  archiveTarget(el){ const t = tgById(el.dataset.id); t.archived = !t.archived; save(); render(); toast(t.archived ? 'Target archived. Past data is kept.' : 'Target restored'); },
+  tplFill(el){ const x = TEMPLATES[+el.dataset.i]; formMethod = x.method; const keep = {name:x.name, def:x.def, int:x.intervalSec, to:x.timeoutSec}; render(); $('#tName').value = keep.name; $('#tDef').value = keep.def; if(keep.int && $('#tInt')) $('#tInt').value = keep.int; if(keep.to && $('#tTo')) $('#tTo').value = keep.to; },
+
+  openSession(el){ go('session', el.dataset.id); },
+  clearFilters(){ S.ui.filters = {student:'',target:'',setting:'',observer:'',from:'',to:''}; save(); render(); },
+  csvSummary(){ saveFile(`sightline_summary_${stamp()}.csv`, toCSV(summaryRows(filtered(), S.ui.filters.target)), 'text/csv'); },
+  csvEvents(){ saveFile(`sightline_events_${stamp()}.csv`, toCSV(eventRows(filtered(), S.ui.filters.target)), 'text/csv'); },
+  csvOne(el){ const s = sesById(el.dataset.id); const rows = summaryRows([s]); const ev = eventRows([s]); saveFile(`observation_${stuById(s.studentId)?.code}_${s.date}.csv`, toCSV(rows) + '\r\n' + toCSV(ev), 'text/csv'); },
+  restorePick(){ $('#restoreFile').click(); },
+  backup(){ saveFile(`sightline_backup_${stamp()}.json`, JSON.stringify(S, null, 1), 'application/json'); },
+  editMeta(el){ metaDialog(sesById(el.dataset.id)); },
+  copyNarr(el){ const txt = narrative(sesById(el.dataset.id)); openDialog({title:'Summary text', body:`<p class="small sub">Plain-language summary of this observation for a report draft. Review and edit before using it.</p><textarea class="copybox" id="narrText">${esc(txt)}</textarea>`, actions:[{label:'Close'}, {label:'Copy', kind:'primary', onClick:() => { copyText($('#narrText').value, $('#narrText')); return false; }}]}); },
+  pdfSession(el){ pdfSession(el.dataset.id); },
+  pdfProgress(el){ pdfProgress(el.dataset.id); },
+  delSession(el){ const s = sesById(el.dataset.id); confirmDialog('Delete this session?', `This permanently deletes the ${fmtDate(s.date)} observation for ${esc(stuById(s.studentId)?.code)} and all ${s.events.length} entries. This cannot be undone.`, 'Delete session', () => { S.sessions = S.sessions.filter(x => x.id !== s.id); save(); go('sessions'); toast('Session deleted'); }); },
+  editEv(el){ const s = sesById(el.dataset.s); editEventDialog(s, s.events.find(e => e.id === el.dataset.e)); },
+  voidEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e);
+    openDialog({title:'Void this entry?', body:`<p>“${esc(describeEvent(e))}” will be excluded from all calculations. It stays in the timeline, crossed out, and you can restore it.</p><label class="f">Reason (optional)<input type="text" name="reason" id="voidReason"></label>`,
+      actions:[{label:'Cancel'}, {label:'Void entry', kind:'danger solid', submit:true}], onSubmit: fd => { voidEvent(e, fd.get('reason')); render(); toast('Entry voided'); }}); },
+  restoreEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e); restoreEvent(e, 'Restored in review'); render(); toast('Entry restored'); },
+  gview(el){ S.ui.graph = S.ui.graph || {}; S.ui.graph.view = el.dataset.v; save(); render(); },
+  resetDemo(){ confirmDialog('Reload demo data?', 'Demo students, targets, and sessions return to their original state. Students you added are kept.', 'Reload demo data', () => {
+    const demoS = new Set(S.students.filter(s => s.demo).map(s => s.id)); S.students = S.students.filter(s => !s.demo); S.targets = S.targets.filter(t => !t.demo && !demoS.has(t.studentId)); S.sessions = S.sessions.filter(s => !s.demo && !demoS.has(s.studentId));
+    const d = seedDemo(emptyState()); S.students.unshift(...d.students); S.targets.unshift(...d.targets); S.sessions.push(...d.sessions); save(); render(); toast('Demo data reloaded'); }, false); },
+  clearAll(){ confirmDialog('Delete all data?', 'Every student, target, and session in this browser will be permanently deleted. This cannot be undone.', 'Delete everything', () => { S = emptyState(); save(); go('observe'); toast('All data deleted'); }); }
+};
+
+function studentDialog(st){
+  openDialog({title: st ? 'Edit student' : 'Add student',
+    body:`<label class="f">Student code <span class="hint">A code you assign, such as your initials and a number (KM-04). Never a name, birth date, or district ID.</span><input type="text" name="code" id="sdCode" required value="${esc(st?.code || '')}" data-namecheck="sdWarn" autocomplete="off"><span class="fieldwarn" id="sdWarn" role="alert"></span></label>
+      <label class="f">Grade (optional)<select name="grade" id="sdGrade"><option value="">—</option>${['PreK','K','1','2','3','4','5','6','7','8','9','10','11','12','Transition'].map(g => `<option ${st?.grade === g ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
+      <label class="f">Notes (optional)<textarea name="notes" id="sdNotes" placeholder="Context only. No names or identifying details.">${esc(st?.notes || '')}</textarea></label><p class="fieldwarn" id="sdErr" role="alert"></p>`,
+    actions:[{label:'Cancel'}, {label: st ? 'Save' : 'Add student', kind:'primary', submit:true}],
+    onSubmit: fd => {
+      const code = String(fd.get('code') || '').trim();
+      if(!code){ $('#sdErr').textContent = 'Enter a student code.'; return false; }
+      if(S.students.some(s => s.code.toLowerCase() === code.toLowerCase() && s.id !== st?.id)){ $('#sdErr').textContent = 'That code is already in use.'; return false; }
+      if(st){ Object.assign(st, {code, grade:fd.get('grade'), notes:fd.get('notes')}); }
+      else { const n = {id:uid('stu'), code, grade:fd.get('grade'), notes:fd.get('notes'), demo:false}; S.students.push(n); S.ui.selStudent = n.id; editingTarget = null; }
+      save(); render(); toast(st ? 'Student saved' : 'Student added');
+    }});
+}
+function metaDialog(s){
+  openDialog({title:'Edit session details',
+    body:`<div class="fields"><label class="f">Setting<input type="text" name="setting" id="mdSet" value="${esc(s.setting)}" required></label><label class="f">Observer<input type="text" name="observer" id="mdObs" value="${esc(s.observer)}"></label>
+      <label class="f">Date<input type="date" name="date" id="mdDate" value="${esc(s.date)}" required></label><label class="f">Start time<input type="time" name="startTime" id="mdTime" value="${esc(s.startTime)}" required></label></div>
+      <label class="f">Reason for change (optional)<input type="text" name="reason" id="mdReason"></label>`,
+    actions:[{label:'Cancel'}, {label:'Save', kind:'primary', submit:true}],
+    onSubmit: fd => { const changes = {}; for(const k of ['setting','observer','date','startTime']){ const v = String(fd.get(k) || ''); if(v !== s[k]){ changes[k] = {from:s[k], to:v}; s[k] = v; } }
+      if(Object.keys(changes).length){ s.metaHistory = s.metaHistory || []; s.metaHistory.push({at:Date.now(), changes, reason:fd.get('reason') || ''}); save(); toast('Details saved'); } render(); }});
+}
+
+/* ---------- forms ---------- */
+function findOrCreateStudent(code){
+  let st = S.students.find(s => s.code.toLowerCase() === code.toLowerCase());
+  if(!st){ st = {id:uid('stu'), code, grade:'', notes:'', demo:false}; S.students.push(st); }
+  return st;
+}
+const FORMS = {
+  quick(fd){
+    if(liveSession()){ toast('End the current observation first.'); return; }
+    const code = String(fd.get('code') || '').trim(), setting = String(fd.get('setting') || '').trim(), name = String(fd.get('name') || '').trim(), def = String(fd.get('definition') || '').trim();
+    const miss = [!code && 'student code', !setting && 'setting', !name && 'behavior name', !def && 'definition'].filter(Boolean);
+    if(miss.length){ toast('Add the ' + miss.join(', ')); return; }
+    const method = fd.get('method'); const st = findOrCreateStudent(code);
+    let t = S.targets.find(x => x.studentId === st.id && x.name.toLowerCase() === name.toLowerCase() && x.method === method && !x.archived);
+    const config = {}; if(INTERVAL_METHODS.includes(method)){ config.intervalSec = Math.max(3, +fd.get('intervalSec') || 10); config.cue = true; }
+    if(method === 'latency') config.timeoutSec = 30; if(method === 'percent') config.allowPrompted = true;
+    if(method === 'abc'){ config.antecedents = DEFAULT_ANTECEDENTS.slice(); config.consequences = DEFAULT_CONSEQUENCES.slice(); }
+    if(!t){ t = {id:uid('tg'), studentId:st.id, name, method, definition:def, config, goal:{}, archived:false}; S.targets.push(t); }
+    else { t.definition = def; Object.assign(t.config, config); }
+    S.ui.quickCode = code;
+    newSession({studentId:st.id, setting, observer:String(fd.get('observer') || '').trim(), date:todayISO(), startTime:nowHM(), targetIds:[t.id]});
+  },
+  plan(fd){
+    if(liveSession()){ toast('End the current observation first.'); return; }
+    const ids = fd.getAll('targets'); const setting = String(fd.get('setting') || '').trim();
+    if(!ids.length){ toast('Choose at least one target'); return; }
+    if(!setting){ toast('Add the setting'); $('#pSetting').focus(); return; }
+    S.ui.planSetting = '';
+    newSession({studentId:fd.get('studentId'), setting, observer:String(fd.get('observer') || '').trim(), date:fd.get('date') || todayISO(), startTime:fd.get('time') || nowHM(), targetIds:ids});
+  },
+  target(fd){
+    const st = stuById(S.ui.selStudent) || S.students[0];
+    const name = String(fd.get('name') || '').trim(), def = String(fd.get('definition') || '').trim(), method = fd.get('method');
+    if(!name || !def){ toast('Add a name and an operational definition'); return; }
+    const config = {};
+    if(INTERVAL_METHODS.includes(method)){ config.intervalSec = Math.max(3, +fd.get('intervalSec') || 10); config.cue = fd.get('cue') === 'on'; }
+    if(method === 'latency') config.timeoutSec = Math.max(0, +fd.get('timeoutSec') || 0);
+    if(method === 'percent') config.allowPrompted = fd.get('allowPrompted') === 'on';
+    if(method === 'task'){ config.steps = String(fd.get('steps') || '').split('\n').map(x => x.trim()).filter(Boolean); if(!config.steps.length){ toast('Add at least one step'); return; } }
+    if(method === 'abc'){ config.antecedents = String(fd.get('antecedents') || '').split('\n').map(x => x.trim()).filter(Boolean); config.consequences = String(fd.get('consequences') || '').split('\n').map(x => x.trim()).filter(Boolean); }
+    const gv = String(fd.get('goalValue') || '').trim();
+    const goal = {text:String(fd.get('goalText') || '').trim(), value: gv === '' ? null : +gv};
+    if(editingTarget && editingTarget !== 'new'){
+      const t = tgById(editingTarget);
+      const used = S.sessions.some(s => s.targetIds.includes(t.id));
+      if(used && t.method !== method){ toast('This target already has data. Archive it and add a new target to change the method.'); return; }
+      Object.assign(t, {name, definition:def, method, config, goal});
+    } else S.targets.push({id:uid('tg'), studentId:st.id, name, method, definition:def, config, goal, archived:false});
+    editingTarget = null; formMethod = null; save(); render(); toast('Target saved');
+  }
+};
+
+/* ---------- global event wiring ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if(!el || el.closest('#dlg')) return;
+  const fn = A[el.dataset.act]; if(!fn) return;
+  if(el.tagName === 'A') e.preventDefault();
+  fn(el, e);
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('[data-form]'); if(!f) return; e.preventDefault();
+  const fn = FORMS[f.dataset.form]; fn && fn(new FormData(f));
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if(el.dataset.actChange === 'planStudent'){ S.ui.planStudent = el.value; render(); }
+  if(el.dataset.actChange === 'formMethod'){ const keep = {name:$('#tName').value, def:$('#tDef').value, gt:$('#tGoal')?.value}; formMethod = el.value; render(); $('#tName').value = keep.name; $('#tDef').value = keep.def; if($('#tGoal')) $('#tGoal').value = keep.gt; document.getElementById('m_' + el.value)?.focus(); }
+  if(el.dataset.filter){ S.ui.filters[el.dataset.filter] = el.value; if(el.dataset.filter === 'student'){ const t = tgById(S.ui.filters.target); if(t && el.value && t.studentId !== el.value) S.ui.filters.target = ''; } save(); render(); }
+  if(el.dataset.change === 'restore'){ const file = el.files[0]; if(!file) return; const rd = new FileReader();
+    rd.onload = () => { try { const d = JSON.parse(rd.result); if(d.version !== 1 || !Array.isArray(d.sessions)) throw new Error('bad');
+      confirmDialog('Replace data with this backup?', `The backup has ${d.students.length} students and ${d.sessions.length} sessions. Current data in this browser will be replaced.`, 'Replace data', () => { S = d; S.ui = S.ui || emptyState().ui; save(); render(); toast('Backup restored'); }); }
+      catch(err){ toast('That file is not a Sightline backup.'); } };
+    rd.readAsText(file); el.value = ''; }
+});
+document.addEventListener('input', e => {
+  const el = e.target;
+  if(el.dataset.namecheck){ const w = document.getElementById(el.dataset.namecheck); if(w) w.textContent = nameLikeWarning(el.value); }
+  if(el.dataset.input === 'sessNotes'){ const s = liveSession(); if(s){ s.notes = el.value; save(); } }
+  if(el.dataset.input === 'sesNotesDetail'){ const s = sesById(el.dataset.id); if(s){ s.notes = el.value; save(); } }
+  if(el.dataset.abc){ const s = liveSession(); const d = s?.abcDraft?.[el.dataset.abc]; if(d){ d[el.dataset.field] = el.value; save(); } }
+});
+document.addEventListener('keydown', e => {
+  if(route.view !== 'live' || $('#dlg').open) return;
+  const tag = (e.target.tagName || '').toLowerCase(); if(['input','textarea','select'].includes(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
+  const s = liveSession(); if(!s) return;
+  if(e.key === 'p' || e.key === 'P'){ e.preventDefault(); s.status === 'paused' ? resumeSession(s) : pauseSession(s); return; }
+  if(e.key === 'u' || e.key === 'U'){ e.preventDefault(); undoLast(s); return; }
+  if(/^[1-9]$/.test(e.key)){
+    const t = tgById(s.targetIds[+e.key - 1]); if(!t) return; e.preventDefault();
+    const fake = {dataset:{t:t.id}};
+    if(t.method === 'frequency') A.count(fake);
+    else if(t.method === 'duration') A.durToggle(fake);
+    else if(t.method === 'latency') (s.latencyPending?.[t.id] ? A.latResp : A.latTrig)(fake);
+    else if(t.method === 'partial'){ const idx = Math.floor(Calc.observedMs(s) / (t.config.intervalSec * 1000)); scoreInterval(s, t, idx, 'yes'); render(); }
+  }
+});
+document.addEventListener('visibilitychange', () => { const s = liveSession(); if(document.visibilityState === 'visible' && s && s.status === 'active') keepAwake(true); });
+
+/* ---------- boot ---------- */
+(function boot(){
+  Store.probe();
+  S = Store.load();
+  if(!S || S.version !== 1){ S = seedDemo(emptyState()); save(); }
+  S.ui = Object.assign(emptyState().ui, S.ui || {});
+  route = parseHash();
+  render(); startTicker();
+  window.addEventListener('resize', () => document.documentElement.style.setProperty('--hh', $('#topHeader').offsetHeight + 'px'));
+})();
+</script>
+
+<div id="installHint" hidden style="position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px -18px rgba(0,0,0,.5);padding:12px max(16px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px))">
+  <div style="max-width:1180px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <span style="flex:1 1 240px">To use Sightline offline on this iPhone or iPad, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. Open it from the new icon.</span>
+    <button type="button" id="installHintClose" class="sm">Got it</button>
+  </div>
+</div>
+<script>
+/* Installable-app support: offline cache, persistent storage, iOS install hint */
+(function(){
+  var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  var secure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if ('serviceWorker' in navigator && secure) {
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var dismissed = false; try { dismissed = localStorage.getItem('sightline.installHint') === 'no'; } catch(e) {}
+  if (ios && !standalone && secure && !dismissed) {
+    var h = document.getElementById('installHint'); h.hidden = false;
+    document.getElementById('installHintClose').addEventListener('click', function(){ h.hidden = true; try { localStorage.setItem('sightline.installHint', 'no'); } catch(e) {} });
+  }
+})();
+</script>
+</body></html>
