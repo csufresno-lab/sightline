@@ -183,6 +183,9 @@ button.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
 .cell.yes{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
 .cell.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
 .cell.un{color:var(--ink-2);background:repeating-linear-gradient(45deg,var(--sunk) 0 4px,var(--surface) 4px 8px)}
+.cell.note{position:relative}
+.cell.note::after{content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--mark);box-shadow:0 0 0 1.5px var(--surface)}
+.legend .notedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mark);vertical-align:middle;margin-right:4px}
 .cell.cur{border-style:dashed;border-color:var(--mark);color:var(--mark);background:var(--surface)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);align-items:center}
 .legend .cell{width:20px;height:20px;min-height:20px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;cursor:default}
@@ -339,6 +342,9 @@ const Calc = {
     return sum(sess.segments.map(g => (g.e ?? now) - g.s));
   },
   events(sess, tid, type){ return sess.events.filter(e => e.targetId === tid && !e.voided && (!type || e.type === type)); },
+  intervalData(sess, tid){
+    const m = {}; for(const e of this.events(sess, tid, 'interval')) m[e.data.index] = e.data; return m;
+  },
   intervalMap(sess, tid){
     const m = {}; for(const e of this.events(sess, tid, 'interval')) m[e.data.index] = e.data.value; return m;
   },
@@ -400,11 +406,15 @@ const Calc = {
         const scored = yes + no, unscored = total - scored;
         const w = INT_WORDS[tg.method];
         const cells = []; for(let i = 0; i < total; i++) cells.push(map[i] || null);
+        const idata = this.intervalData(sess, tg.id);
+        const notes = []; for(let i = 0; i < total; i++) notes.push((idata[i] && idata[i].notes) || '');
+        o.notes = notes; o.noteCount = notes.filter(Boolean).length;
         Object.assign(o, {num:yes, den:scored, scale:100, value: scored ? yes/scored*100 : null, big: scored ? fmtNum(yes/scored*100, 0) + '%' : '—', bigLabel:'of scored intervals', yes, no, scored, unscored, total, completed, cells, L});
         o.rows = [['Interval length', `${L/1000} s`], ['Intervals in session', String(total)],
           ['Scored', String(scored)], [`Scored "${w.yes}"`, String(yes)], [`Scored "${w.no}"`, String(no)],
           ['Not scored (excluded, not counted as absent)', String(unscored)],
           ['Percent', scored ? `${yes} ÷ ${scored} scored = ${fmtNum(yes/scored*100, 1)}%` : '—']];
+        if(o.noteCount) o.rows.push(['Intervals with notes', String(o.noteCount)]);
         break;
       }
       case 'percent': {
@@ -533,6 +543,8 @@ function seedDemo(st){
       }
     };
     scoreIntervals('tg_d4', 15, .62 - k*.08);
+    const demoNotes = {0:[[2,'Looked out the window when the hallway got loud.'],[9,'Drawing on the desk instead of the worksheet.']], 3:[[5,'Teacher was helping another student; looked around the room.']], 5:[[12,'Back on task after teacher proximity.']]};
+    for(const [i, n] of (demoNotes[k] || [])){ const e = sess.events.find(x => x.targetId === 'tg_d4' && x.type === 'interval' && x.data.index === i); if(e) e.data.notes = n; }
     if(ids.includes('tg_d5')) scoreIntervals('tg_d5', 10, .45 - k*.05);
     if(ids.includes('tg_d6')) scoreIntervals('tg_d6', 15, .35 + k*.08);
     // percent correct
@@ -809,16 +821,48 @@ function voidEvent(ev, reason){ ev.voided = true; ev.history.push({at:Date.now()
 function restoreEvent(ev, reason){ ev.voided = false; ev.history.push({at:Date.now(), action:'restored', reason: reason || ''}); save(); }
 function editEvent(ev, newData, reason){
   const changes = {};
-  for(const k of Object.keys(newData)){ const a = ev.data[k], b = newData[k]; if(JSON.stringify(a) !== JSON.stringify(b)) changes[k] = {from:a, to:b}; }
-  if(!Object.keys(changes).length) return false;
+  for(const k of Object.keys(newData)){ if(k === 'skipped') continue; const a = ev.data[k] ?? null, b = newData[k] ?? null; if(JSON.stringify(a) !== JSON.stringify(b)) changes[k] = {from:a, to:b}; }
+  if(!Object.keys(changes).length){ Object.assign(ev.data, newData); save(); return false; }
   ev.history.push({at:Date.now(), action:'edited', changes, reason: reason || ''});
   Object.assign(ev.data, newData); save(); return true;
 }
 function scoreInterval(sess, tg, idx, value, reason){
   const ev = sess.events.find(e => e.targetId === tg.id && e.type === 'interval' && e.data.index === idx && !e.voided);
-  if(ev){ const prev = ev.data.value; if(prev === value) return; editEvent(ev, {value}, reason); undoStack.push({kind:'set', evId:ev.id, prev, label:`Interval ${idx+1} change`}); }
+  if(ev){ const prev = ev.data.value; if(prev === value) return; editEvent(ev, {value, skipped: value == null}, reason); undoStack.push({kind:'set', evId:ev.id, prev, label:`Interval ${idx+1} change`}); }
   else if(value){ record(sess, tg.id, 'interval', {index:idx, value}); }
   save();
+}
+function findIntervalEvent(sess, tid, k){ return sess.events.find(e => e.targetId === tid && e.type === 'interval' && e.data.index === k && !e.voided); }
+function intervalDialog(sess, t, k, focusNote){
+  const w = INT_WORDS[t.method]; const L = (t.config.intervalSec || 10) * 1000;
+  const ev = findIntervalEvent(sess, t.id, k); const val = ev?.data.value || ''; const note = ev?.data.notes || '';
+  const ended = sess.status === 'ended';
+  const obs = Calc.observedMs(sess); const inProgress = !ended && k === Math.floor(obs / L);
+  openDialog({title:`${t.name} · Interval ${k+1}`,
+    body:`<p class="small sub">${fmtClock(k*L)}–${fmtClock((k+1)*L)} session time${inProgress ? ' · in progress now' : ''}${ev && ended ? '. Changes are added to this interval\u2019s history.' : ''}</p>
+      <fieldset><legend>Score</legend>${[['yes', w.yes], ['no', w.no], ['', 'Not scored']].map(([v, l], i) => `<label class="check"><input type="radio" name="value" id="iv_v${i}" value="${v}" ${val === v ? 'checked' : ''}><span>${esc(l)}</span></label>`).join('')}</fieldset>
+      <label class="f">Note for this interval <span class="hint">What you saw, in observable terms. No names or identifying details.</span><textarea name="notes" id="ivNote" rows="3" placeholder="e.g. Teacher gave a 2-step direction; student looked at peer">${esc(note)}</textarea></label>
+      ${ended ? `<label class="f">Reason for change (optional)<input type="text" name="reason" id="ivReason"></label>` : ''}`,
+    actions:[{label:'Cancel'}, {label:'Save', kind:'primary', submit:true}],
+    onSubmit: fd => {
+      const value = fd.get('value') || null; const notes = String(fd.get('notes') || '').trim();
+      const reason = fd.get('reason') || (ended ? 'Corrected in review' : 'Changed during session');
+      const completed = ended ? Infinity : Math.floor(Calc.observedMs(sess) / L);
+      const cur = findIntervalEvent(sess, t.id, k);
+      // Adding a note never dismisses a scoring prompt. Only "Leave unscored", or clearing an existing score, does.
+      const skipped = value == null && k < completed && !!(cur && (cur.data.value || cur.data.skipped));
+      if(cur){ const prev = cur.data.value; if(editEvent(cur, {value, notes, skipped}, reason) && !ended && prev !== value) undoStack.push({kind:'set', evId:cur.id, prev, label:`Interval ${k+1} change`}); }
+      else if(value || notes){
+        const ne = mkEvent(t.id, 'interval', ended ? (k+1) * L : Calc.observedMs(sess), {index:k, value, notes, skipped});
+        if(ended) ne.history.push({at:Date.now(), action:'added', reason:'Scored or noted in review after the session'});
+        else undoStack.push({kind:'add', evId:ne.id, label:`Interval ${k+1}`});
+        sess.events.push(ne);
+      }
+      save(); render(); toast(notes && notes !== note ? `Note saved for interval ${k+1}` : 'Interval saved');
+      const b = document.getElementById(`c_${t.id}_${k}`); b && b.focus({preventScroll:true});
+    }});
+  if(focusNote){ const n = $('#ivNote'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }
+  else { const r = document.querySelector('#dlg input[name="value"]:checked') || $('#iv_v0'); r && r.focus(); }
 }
 function undoLast(sess){
   const u = undoStack.pop(); if(!u){ toast('Nothing to undo'); return; }
@@ -900,8 +944,9 @@ function targetCard(sess, t, i){
     case 'partial': case 'whole': case 'mts': {
       const w = INT_WORDS[t.method];
       const L = r.L; const obs = Calc.observedMs(sess); const cur = Math.floor(obs / L);
-      const map = Calc.intervalMap(sess, id);
-      const pending = []; for(let k = r.completed - 1; k >= 0 && pending.length < 50; k--) if(!(k in map)) pending.push(k);
+      const map = Calc.intervalMap(sess, id); const idata = Calc.intervalData(sess, id);
+      const pending = []; for(let k = r.completed - 1; k >= 0 && pending.length < 50; k--) if(!idata[k] || (!idata[k].value && !idata[k].skipped)) pending.push(k);
+      const curNote = idata[cur]?.notes;
       const showP = pending.slice(0, 2);
       const curMarked = map[cur];
       let curCtl = '';
@@ -914,12 +959,14 @@ function targetCard(sess, t, i){
       body = `<div class="stack" style="gap:6px"><div class="row small"><span>Interval <b class="mono" data-intn="${id}">${cur+1}</b> · ${L/1000}-s intervals</span><span class="spacer"></span><span class="mono" data-intleft="${id}">${fmtClock(L - (obs % L))}</span> left</div>
         <div class="prog" aria-hidden="true"><i data-intbar="${id}" style="width:${(obs % L)/L*100}%"></i></div></div>
         ${curCtl}
-        ${showP.map(k => `<div class="prompt" role="group" aria-label="Score interval ${k+1}"><p>Interval ${k+1} ended. ${w.q}</p><div class="btns3">
+        <div class="row" style="gap:8px"><button class="sm" id="b_${id}_note" data-act="intNote" data-t="${id}">${curNote ? 'Edit note' : 'Add note'} · interval ${cur+1}</button>${curNote ? `<span class="small sub" style="flex:1;min-width:0;overflow-wrap:anywhere">“${esc(curNote)}”</span>` : ''}</div>
+        ${showP.map(k => `<div class="prompt" role="group" aria-label="Score interval ${k+1}"><p>Interval ${k+1} ended. ${w.q}</p>${idata[k]?.notes ? `<p class="small" style="font-weight:400">Note: ${esc(idata[k].notes)}</p>` : ''}<div class="btns3">
           <button class="yes" id="b_${id}_p${k}y" data-act="intScore" data-t="${id}" data-k="${k}" data-v="yes">${w.yes}</button>
           <button class="no" id="b_${id}_p${k}n" data-act="intScore" data-t="${id}" data-k="${k}" data-v="no">${w.no}</button>
-          <button class="ghost" id="b_${id}_p${k}s" data-act="intSkip" data-t="${id}" data-k="${k}">Leave unscored</button></div></div>`).join('')}
-        ${pending.length > 2 ? `<p class="small sub">${pending.length - 2} earlier interval(s) not scored. Tap a cell below to score it.</p>` : ''}
-        ${stripHTML(r.cells, t, true, sess.status !== 'ended' ? cur : null)}
+          <button class="ghost" id="b_${id}_p${k}s" data-act="intSkip" data-t="${id}" data-k="${k}">Leave unscored</button></div>
+          <button class="ghost sm" style="align-self:flex-start" id="b_${id}_p${k}note" data-act="intNote" data-t="${id}" data-k="${k}">${idata[k]?.notes ? 'Edit note' : 'Add note'} for interval ${k+1}</button></div>`).join('')}
+        ${pending.length > 2 ? `<p class="small sub">${pending.length - 2} earlier interval(s) not scored. Tap a cell below to score it or add a note.</p>` : ''}
+        ${stripHTML(r.cells, t, true, sess.status !== 'ended' ? cur : null, r.notes)}
         <div class="stat"><span>Scored <b>${r.scored}</b></span><span>${w.yes} <b>${r.yes}</b></span><span>Unscored <b>${r.unscored}</b></span></div>`;
       break;
     }
@@ -961,17 +1008,17 @@ function targetCard(sess, t, i){
   }
   return `<article class="tcard ${running || sess.latencyPending?.[id] ? 'active' : ''}" aria-label="${esc(t.name)}, ${m.label}">${head}${body}</article>`;
 }
-function stripHTML(cells, t, clickable, cur){
-  const w = INT_WORDS[t.method];
+function stripHTML(cells, t, clickable, cur, notes){
+  const w = INT_WORDS[t.method]; notes = notes || [];
   const out = cells.map((v, k) => {
-    const cls = v === 'yes' ? 'yes' : v === 'no' ? 'no' : 'un'; const g = v === 'yes' ? '+' : v === 'no' ? '–' : '?';
-    const lbl = `Interval ${k+1}: ${v === 'yes' ? w.yes : v === 'no' ? w.no : 'not scored'}`;
-    return clickable ? `<button class="cell ${cls}" id="c_${t.id}_${k}" data-act="intCycle" data-t="${t.id}" data-k="${k}" aria-label="${lbl}. Activate to change." title="${lbl}">${g}</button>`
-      : `<span class="cell ${cls}" role="img" aria-label="${lbl}" title="${lbl}" style="display:inline-flex;align-items:center;justify-content:center">${g}</span>`;
+    const cls = (v === 'yes' ? 'yes' : v === 'no' ? 'no' : 'un') + (notes[k] ? ' note' : ''); const g = v === 'yes' ? '+' : v === 'no' ? '–' : '?';
+    const lbl = `Interval ${k+1}: ${v === 'yes' ? w.yes : v === 'no' ? w.no : 'not scored'}${notes[k] ? '. Note: ' + notes[k] : ''}`;
+    return clickable ? `<button class="cell ${cls}" id="c_${t.id}_${k}" data-act="intCycle" data-t="${t.id}" data-k="${k}" aria-label="${esc(lbl)}. Activate to score or add a note." title="${esc(lbl)}">${g}</button>`
+      : `<span class="cell ${cls}" role="img" aria-label="${esc(lbl)}" title="${esc(lbl)}" style="display:inline-flex;align-items:center;justify-content:center">${g}</span>`;
   });
   if(cur != null && cur >= cells.length) out.push(`<span class="cell cur" role="img" aria-label="Interval ${cur+1} in progress" style="display:inline-flex;align-items:center;justify-content:center">…</span>`);
   return `<div class="stack" style="gap:6px"><div class="strip">${out.join('')}</div>
-    <div class="legend"><span><span class="cell yes">+</span> ${w.yes}</span><span><span class="cell no">–</span> ${w.no}</span><span><span class="cell un">?</span> Not scored (excluded)</span></div></div>`;
+    <div class="legend"><span><span class="cell yes">+</span> ${w.yes}</span><span><span class="cell no">–</span> ${w.no}</span><span><span class="cell un">?</span> Not scored (excluded)</span><span><span class="notedot" aria-hidden="true"></span>Has a note</span></div></div>`;
 }
 function describeEvent(e){
   const tg = tgById(e.targetId); const d = e.data;
@@ -979,7 +1026,7 @@ function describeEvent(e){
     case 'count': return 'Occurrence (+1)';
     case 'episode': return `Episode ${fmtClock(d.start)}–${fmtClock(d.end)} (${fmtDur(d.end - d.start)})${d.endedBy ? ', stopped at ' + d.endedBy : ''}`;
     case 'latency': return d.outcome === 'response' ? `Response after ${fmtNum((d.response - d.trigger)/1000, 1)} s` : d.outcome === 'timeout' ? `Timed out (no response within ${tg?.config.timeoutSec || '?'} s)` : d.outcome === 'incomplete' ? 'Incomplete: session ended before a response' : 'No response (observer marked)';
-    case 'interval': { const w = INT_WORDS[tg?.method] || INT_WORDS.partial; const L = (tg?.config.intervalSec || 10); return `Interval ${d.index+1} (${fmtClock(d.index*L*1000)}–${fmtClock((d.index+1)*L*1000)}): ${d.value === 'yes' ? w.yes : d.value === 'no' ? w.no : 'not scored'}`; }
+    case 'interval': { const w = INT_WORDS[tg?.method] || INT_WORDS.partial; const L = (tg?.config.intervalSec || 10); return `Interval ${d.index+1} (${fmtClock(d.index*L*1000)}–${fmtClock((d.index+1)*L*1000)}): ${d.value === 'yes' ? w.yes : d.value === 'no' ? w.no : 'not scored'}${d.notes ? ' · Note: ' + d.notes : ''}`; }
     case 'trial': return d.result === 'correct' ? 'Correct' : d.result === 'prompted' ? 'Correct with prompt' : 'Incorrect';
     case 'ta_run': { const sc = d.scores.filter(Boolean); return `Run: ${sc.filter(s => s === 'I').length}/${sc.length} steps independent (${d.scores.map(s => s || '·').join(' ')})`; }
     case 'abc': return `A: ${d.antecedent || '—'} · B: ${d.behavior || '—'} · C: ${d.consequence || '—'}`;
@@ -1182,7 +1229,7 @@ function targetSummary(s, t){
   if(t.method === 'frequency' && r.count) extra = `<div class="chart">${cumulativeChart(s, t)}</div>`;
   if(t.method === 'duration'){ const eps = Calc.events(s, t.id, 'episode'); if(eps.length) extra = `<div class="tablewrap"><table><thead><tr><th>#</th><th class="n">Start</th><th class="n">End</th><th class="n">Duration</th></tr></thead><tbody>${eps.map((e, i) => `<tr><td>${i+1}</td><td class="n">${fmtClock(e.data.start)}</td><td class="n">${fmtClock(e.data.end)}</td><td class="n">${fmtDur(e.data.end - e.data.start)}</td></tr>`).join('')}</tbody></table></div>`; }
   if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) extra = `<div class="tablewrap"><table><thead><tr><th>#</th><th class="n">Instruction at</th><th>Outcome</th><th class="n">Latency</th></tr></thead><tbody>${tr.map((e, i) => `<tr><td>${i+1}</td><td class="n">${fmtClock(e.data.trigger)}</td><td>${e.data.outcome === 'response' ? 'Response' : e.data.outcome === 'timeout' ? 'Timed out' : e.data.outcome === 'incomplete' ? 'Incomplete' : 'No response'}</td><td class="n">${e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'}</td></tr>`).join('')}</tbody></table></div>`; }
-  if(INTERVAL_METHODS.includes(t.method)) extra = `<p class="small sub">Select a cell to correct its score. Changes are logged.</p>${stripHTML(r.cells, t, true, null)}`;
+  if(INTERVAL_METHODS.includes(t.method)) extra = `<p class="small sub">Select a cell to correct its score or add a note. Changes are logged.</p>${stripHTML(r.cells, t, true, null, r.notes)}${intervalNotesTable(r, t)}`;
   if(t.method === 'percent'){ const tr = Calc.events(s, t.id, 'trial'); if(tr.length) extra = `<div class="strip" aria-label="Trial sequence">${tr.map((e, i) => `<span class="cell ${e.data.result === 'correct' ? 'yes' : e.data.result === 'incorrect' ? 'no' : 'un'}" style="display:inline-flex;align-items:center;justify-content:center;width:auto;padding:0 6px" title="Trial ${i+1}: ${e.data.result}" role="img" aria-label="Trial ${i+1}: ${e.data.result}">${e.data.result === 'correct' ? '+' : e.data.result === 'incorrect' ? '–' : 'P'}</span>`).join('')}</div><div class="legend"><span>+ correct</span><span>P prompted</span><span>– incorrect</span></div>`; }
   if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); extra = `<div class="tablewrap"><table><thead><tr><th>Step</th>${runs.map((_, i) => `<th>Run ${i+1}</th>`).join('')}<th class="n">Independent</th></tr></thead><tbody>${r.byStep.map((b, k) => `<tr><td>${k+1}. ${esc(b.name)}</td>${runs.map(e => `<td title="${esc(LEVEL_LABEL[e.data.scores[k]] || 'Not scored')}" class="mono">${esc(e.data.scores[k] || '·')}</td>`).join('')}<td class="n">${b.indep}/${b.scored}</td></tr>`).join('')}</tbody></table></div>`; }
   if(t.method === 'abc') extra = abcTable(s, t);
@@ -1193,6 +1240,16 @@ function targetSummary(s, t){
     <div class="tablewrap"><table><tbody>${r.rows.map(([k, v]) => `<tr><th scope="row" style="width:45%">${esc(k)}</th><td class="mono">${esc(v)}</td></tr>`).join('')}</tbody></table></div>
     ${extra}
   </section>`;
+}
+function intervalNoteRows(r, t){
+  const w = INT_WORDS[t.method]; const out = [];
+  r.notes.forEach((n, k) => { if(n) out.push([String(k+1), `${fmtClock(k*r.L)}–${fmtClock((k+1)*r.L)}`, r.cells[k] === 'yes' ? w.yes : r.cells[k] === 'no' ? w.no : 'Not scored', n]); });
+  return out;
+}
+function intervalNotesTable(r, t){
+  const rows = intervalNoteRows(r, t); if(!rows.length) return '';
+  return `<h3>Interval notes</h3><div class="tablewrap"><table><thead><tr><th class="n">Interval</th><th class="n">Time</th><th>Score</th><th>Note</th></tr></thead><tbody>
+    ${rows.map(([k, tm, sc, n]) => `<tr><td class="n">${k}</td><td class="n">${tm}</td><td>${esc(sc)}</td><td>${esc(n)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function abcTable(s, t){
   const rows = Calc.events(s, t.id, 'abc');
@@ -1366,7 +1423,7 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.0.0-2026-10-24</p></section>
+    </ul><p class="small sub">Version 1.1.0-2026-11-01</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
     <div class="row"><button data-act="resetDemo" id="btnResetDemo">Reload demo data</button><button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
     <p class="small sub">Reloading demo data replaces the demo students but keeps students you added.</p></section>`;
@@ -1447,7 +1504,7 @@ function sessionReportHTML(s){
   for(const t of s.targetIds.map(tgById).filter(Boolean)){
     const r = Calc.summarize(s, t);
     h += `<div class="target"><h2>${esc(t.name)} — ${esc(METHODS[t.method].label)}</h2><p class="muted">Definition: ${esc(t.definition)}${t.goal?.text ? ` · Goal: ${esc(t.goal.text)}` : ''}</p>${hT(null, r.rows, true)}`;
-    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; h += `<p class="muted">Interval record (+ ${esc(w.yes)}, – ${esc(w.no)}, ? not scored): ${r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')}</p>`; }
+    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; h += `<p class="muted">Interval record (+ ${esc(w.yes)}, – ${esc(w.no)}, ? not scored): ${r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')}</p>`; const nr = intervalNoteRows(r, t); if(nr.length) h += `<h3>Interval notes</h3>` + hT(['Interval','Time','Score','Note'], nr); }
     if(t.method === 'abc'){ const rows = Calc.events(s, t.id, 'abc'); if(rows.length) h += hT(['Time','Context','Antecedent','Behavior','Consequence','Notes'], rows.map(e => [fmtClock(e.t), e.data.context, e.data.antecedent, e.data.behavior, e.data.consequence, e.data.notes])); h += `<p class="muted">ABC entries are descriptive records. They do not identify the function of the behavior.</p>`; }
     if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) h += hT(['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
     if(t.method === 'duration'){ const eps = Calc.events(s, t.id, 'episode'); if(eps.length) h += hT(['#','Start','End','Duration'], eps.map((e, i) => [i+1, fmtClock(e.data.start), fmtClock(e.data.end), fmtDur(e.data.end - e.data.start)])); }
@@ -1484,7 +1541,7 @@ async function pdfSession(id){
     pdfH(ctx, `${t.name} — ${METHODS[t.method].label}`, 11.5);
     pdfP(ctx, `Definition: ${t.definition}${t.goal?.text ? `   Goal: ${t.goal.text}` : ''}`);
     pdfTable(ctx, null, r.rows, {columnStyles:{0:{fontStyle:'bold', cellWidth:200}}});
-    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; pdfP(ctx, 'Interval record (+ ' + w.yes + ', – ' + w.no + ', ? not scored): ' + r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')); }
+    if(INTERVAL_METHODS.includes(t.method)){ const w = INT_WORDS[t.method]; pdfP(ctx, 'Interval record (+ ' + w.yes + ', – ' + w.no + ', ? not scored): ' + r.cells.map((v, i) => `${i+1}${v === 'yes' ? '+' : v === 'no' ? '–' : '?'}`).join(' ')); const nr = intervalNoteRows(r, t); if(nr.length){ pdfP(ctx, 'Interval notes:'); pdfTable(ctx, ['Interval','Time','Score','Note'], nr); } }
     if(t.method === 'abc'){ const rows = Calc.events(s, t.id, 'abc'); if(rows.length) pdfTable(ctx, ['Time','Context','Antecedent','Behavior','Consequence','Notes'], rows.map(e => [fmtClock(e.t), e.data.context, e.data.antecedent, e.data.behavior, e.data.consequence, e.data.notes])); pdfP(ctx, 'ABC entries are descriptive records. They do not identify the function of the behavior.'); }
     if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) pdfTable(ctx, ['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
     if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); pdfTable(ctx, ['Step', ...runs.map((_, i) => `Run ${i+1}`), 'Independent'], r.byStep.map((b, k) => [`${k+1}. ${b.name}`, ...runs.map(e => LEVEL_LABEL[e.data.scores[k]] || '—'), `${b.indep}/${b.scored}`])); }
@@ -1575,14 +1632,14 @@ const A = {
   intScore(el){ const s = liveSession(); const t = tgById(el.dataset.t); scoreInterval(s, t, +el.dataset.k, el.dataset.v); render(); },
   intSkip(el){ // record an explicit "unscored" so the prompt goes away but the interval still counts as not scored
     const s = liveSession(); const t = tgById(el.dataset.t); const k = +el.dataset.k;
-    if(!s.events.find(e => e.targetId === t.id && e.type === 'interval' && e.data.index === k && !e.voided)) record(s, t.id, 'interval', {index:k, value:null, skipped:true});
+    const ev = findIntervalEvent(s, t.id, k);
+    if(!ev) record(s, t.id, 'interval', {index:k, value:null, skipped:true});
+    else { ev.data.skipped = true; save(); }
     render(); },
-  intCycle(el){ const s = route.view === 'session' ? sesById(route.id) : liveSession(); const t = tgById(el.dataset.t); const k = +el.dataset.k;
-    const cur = Calc.intervalMap(s, t.id)[k] || null; const next = cur === 'yes' ? 'no' : cur === 'no' ? null : 'yes';
-    const ev = s.events.find(e => e.targetId === t.id && e.type === 'interval' && e.data.index === k && !e.voided);
-    if(ev) scoreInterval(s, t, k, next, s.status === 'ended' ? 'Corrected in review' : 'Changed during session');
-    else { const ne = mkEvent(t.id, 'interval', s.status === 'ended' ? (k+1) * t.config.intervalSec * 1000 : Calc.observedMs(s), {index:k, value:next}); if(s.status === 'ended') ne.history.push({at:Date.now(), action:'added', reason:'Scored in review after the session'}); s.events.push(ne); if(s.status !== 'ended') undoStack.push({kind:'add', evId:ne.id, label:`Interval ${k+1}`}); save(); }
-    render(); const b = document.getElementById(`c_${t.id}_${k}`); b && b.focus(); },
+  intCycle(el){ const s = route.view === 'session' ? sesById(route.id) : liveSession(); intervalDialog(s, tgById(el.dataset.t), +el.dataset.k, false); },
+  intNote(el){ const s = liveSession(); const t = tgById(el.dataset.t);
+    const k = el.dataset.k != null ? +el.dataset.k : Math.floor(Calc.observedMs(s) / ((t.config.intervalSec || 10) * 1000));
+    intervalDialog(s, t, k, true); },
   trial(el){ const s = liveSession(); record(s, el.dataset.t, 'trial', {result:el.dataset.v}); render(); },
   taStart(el){ const s = liveSession(); const t = tgById(el.dataset.t); s.taRun = s.taRun || {}; s.taRun[t.id] = {t:Calc.observedMs(s), wall:Date.now(), scores:(t.config.steps || []).map(() => null)}; save(); render(); },
   taScore(el){ const s = liveSession(); const r = s.taRun[el.dataset.t]; const k = +el.dataset.k; r.scores[k] = r.scores[k] === el.dataset.v ? null : el.dataset.v; save(); render(); },
@@ -1618,7 +1675,7 @@ const A = {
   pdfSession(el){ pdfSession(el.dataset.id); },
   pdfProgress(el){ pdfProgress(el.dataset.id); },
   delSession(el){ const s = sesById(el.dataset.id); confirmDialog('Delete this session?', `This permanently deletes the ${fmtDate(s.date)} observation for ${esc(stuById(s.studentId)?.code)} and all ${s.events.length} entries. This cannot be undone.`, 'Delete session', () => { S.sessions = S.sessions.filter(x => x.id !== s.id); save(); go('sessions'); toast('Session deleted'); }); },
-  editEv(el){ const s = sesById(el.dataset.s); editEventDialog(s, s.events.find(e => e.id === el.dataset.e)); },
+  editEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e); if(e.type === 'interval') intervalDialog(s, tgById(e.targetId), e.data.index, false); else editEventDialog(s, e); },
   voidEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e);
     openDialog({title:'Void this entry?', body:`<p>“${esc(describeEvent(e))}” will be excluded from all calculations. It stays in the timeline, crossed out, and you can restore it.</p><label class="f">Reason (optional)<input type="text" name="reason" id="voidReason"></label>`,
       actions:[{label:'Cancel'}, {label:'Void entry', kind:'danger solid', submit:true}], onSubmit: fd => { voidEvent(e, fd.get('reason')); render(); toast('Entry voided'); }}); },
