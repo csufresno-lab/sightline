@@ -1,6 +1,6 @@
 /* Sightline service worker: keeps the app available offline.
    To publish an update, change VERSION below and upload the new files. */
-const VERSION = '1.1.0-2026-11-01';
+const VERSION = '1.3.0-2026-11-05';
 const CACHE = 'sightline-' + VERSION;
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png"];
 

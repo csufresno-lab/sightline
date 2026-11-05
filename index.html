@@ -61,7 +61,7 @@ nav.tabs a[aria-current="page"]{background:var(--accent-soft);color:var(--accent
 nav.tabs a:hover{background:var(--sunk)}
 .livebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--mark-soft);color:var(--ink);padding-block:8px;border-top:1px solid var(--line)}
 .livebar .dot{width:10px;height:10px;border-radius:50%;background:var(--mark);flex:none}
-@media (max-width:720px){nav.tabs{margin-left:0;width:100%;display:grid;grid-template-columns:repeat(5,1fr)} nav.tabs a{justify-content:center;padding:0 4px;font-size:.85rem}}
+@media (max-width:720px){nav.tabs{margin-left:0;width:100%;display:grid;grid-template-columns:repeat(3,1fr)} nav.tabs a{justify-content:center;padding:0 4px;font-size:.85rem}}
 
 main{padding-block:20px 64px;display:flex;flex-direction:column;gap:20px}
 .notice{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
@@ -139,7 +139,7 @@ dl.kv dt{color:var(--ink-2);font-size:.9rem} dl.kv dd{margin:0;font-weight:700;m
 /* list rows */
 .list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
 .list>*{border-bottom:1px solid var(--line)} .list>*:last-child{border-bottom:0}
-.lrow{display:flex;gap:12px;align-items:center;padding:12px 14px;flex-wrap:wrap;width:100%;text-align:left;border-radius:0;border:0;background:transparent;min-height:60px;font-weight:400}
+.lrow{display:flex;gap:12px;align-items:center;justify-content:flex-start;padding:12px 14px;flex-wrap:wrap;width:100%;text-align:left;border-radius:0;border:0;background:transparent;min-height:60px;font-weight:400}
 .lrow:hover{background:var(--sunk)}
 .lrow[aria-current="true"]{background:var(--accent-soft)}
 .lrow .t{font-weight:700}
@@ -227,18 +227,37 @@ dialog form{padding:20px;display:flex;flex-direction:column;gap:14px;max-height:
 details.hist summary{cursor:pointer;color:var(--accent);font-size:.82rem}
 details.hist ul{margin:4px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink-2)}
 .srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* home dashboard */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.tile{display:flex;flex-direction:column;gap:6px;min-height:132px;padding:18px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none}
+.tile:hover{border-color:var(--accent);background:var(--accent-soft)}
+.tile .tt{font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:10px}
+.tile .tt svg{flex:none}
+.tile .ts{color:var(--ink-2);font-size:.92rem}
+.tile .tn{margin-top:auto;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:.92rem;color:var(--ink-2)}
+.tile .tn b{font-size:1.5rem;color:var(--ink);font-weight:600;margin-right:4px}
+.tile.go{background:var(--accent);border-color:var(--accent);color:var(--on-accent);grid-column:1/-1;min-height:0}
+.tile.go .ts,.tile.go .tn{color:var(--on-accent);opacity:.9}
+.tile.go:hover{background:var(--accent-2);border-color:var(--accent-2)}
+/* context buttons in live view */
+.ctxbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.ctxbtns{display:flex;flex-wrap:wrap;gap:8px}
+.ctxbtn{min-height:var(--tap);min-width:150px;justify-content:space-between;gap:14px;background:var(--mark-soft);border-color:var(--mark);color:var(--ink)}
+.ctxbtn:hover{background:var(--mark-soft);filter:brightness(.97)}
+.ctxbtn .n{font-family:var(--f-mono);font-size:1.2rem;font-weight:600;color:var(--mark)}
 .copybox{width:100%;min-height:150px;font-family:var(--f-ui)}
 </style>
 
 <div id="app">
   <header class="top" id="topHeader">
     <div class="wrap topbar">
-      <a class="brand" href="#observe" aria-label="Sightline home">
+      <a class="brand" href="#home" aria-label="Sightline home">
         <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="8" fill="var(--accent)"/><path d="M6 15c2.6-4.4 5.6-6.6 9-6.6s6.4 2.2 9 6.6c-2.6 4.4-5.6 6.6-9 6.6S8.6 19.4 6 15z" fill="none" stroke="var(--on-accent)" stroke-width="2"/><circle cx="15" cy="15" r="2.8" fill="var(--on-accent)"/></svg>
         Sightline
       </a>
       <span class="proto" title="Prototype for testing with fictional students only">Prototype · fictional data</span>
       <nav class="tabs" aria-label="Main">
+        <a href="#home" data-nav="home">Home</a>
         <a href="#observe" data-nav="observe">Observe</a>
         <a href="#students" data-nav="students">Students</a>
         <a href="#sessions" data-nav="sessions">Sessions</a>
@@ -472,8 +491,8 @@ const Calc = {
 function rng(seed){ return () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296; }
 function seedDemo(st){
   const R = rng(20261022);
-  const sA = {id:'stu_demo1', code:'DEMO-01', grade:'4', notes:'Fictional demo student. Every recording method has a sample target.', demo:true};
-  const sB = {id:'stu_demo2', code:'DEMO-02', grade:'7', notes:'Fictional demo student.', demo:true};
+  const sA = {id:'stu_demo1', code:'SAMPLE-01', grade:'4', notes:'Fictional sample student. Every recording method has a sample target.', demo:true};
+  const sB = {id:'stu_demo2', code:'SAMPLE-02', grade:'7', notes:'Fictional sample student.', demo:true};
   st.students.push(sA, sB);
   const T = (id, sid, name, method, def, config = {}, goal = {}) => ({id, studentId:sid, name, method, definition:def, config, goal, demo:true, archived:false});
   const tg = [
@@ -559,6 +578,12 @@ function seedDemo(st){
     // ABC
     const nAbc = k < 3 ? 3 : (k < 5 ? 2 : 1);
     for(let i = 0; i < nAbc; i++){ const a = abcSamples[(k + i) % abcSamples.length]; add('tg_d9','abc', 90000 + i*300000, {context:sess.setting, antecedent:a[1], behavior:a[2], consequence:a[3], notes:''}); }
+    if(k % 2 === 0){
+      sess.markers = [{id:'mk_demo' + k + 'a', label:'Teacher prompt'}, {id:'mk_demo' + k + 'b', label:'Peer interaction'}];
+      const nP = 7 - k, nI = 4 - Math.floor(k/2);
+      for(let i = 0; i < nP; i++) add('mk_demo' + k + 'a', 'marker', Math.floor(R() * obs), {label:'Teacher prompt'});
+      for(let i = 0; i < nI; i++) add('mk_demo' + k + 'b', 'marker', Math.floor(R() * obs), {label:'Peer interaction'});
+    }
     sess.events.sort((a,b) => a.t - b.t);
     st.sessions.push(sess);
   }
@@ -574,6 +599,21 @@ function seedDemo(st){
     st.sessions.push(sess);
   }
   return st;
+}
+
+function removeSampleData(){
+  const ids = new Set(S.students.filter(x => x.demo).map(x => x.id));
+  S.students = S.students.filter(x => !ids.has(x.id));
+  S.targets = S.targets.filter(t => !t.demo && !ids.has(t.studentId));
+  S.sessions = S.sessions.filter(x => !x.demo && !ids.has(x.studentId));
+  for(const k of ['student']) if(ids.has(S.ui.filters[k])) S.ui.filters[k] = '';
+  if(S.ui.filters.target && !S.targets.some(t => t.id === S.ui.filters.target)) S.ui.filters.target = '';
+  if(ids.has(S.ui.selStudent)) S.ui.selStudent = ''; if(ids.has(S.ui.planStudent)) S.ui.planStudent = '';
+}
+function loadSampleData(){
+  removeSampleData();
+  const d = seedDemo(emptyState());
+  S.students.push(...d.students); S.targets.push(...d.targets); S.sessions.push(...d.sessions); save();
 }
 
 /* =====================================================================
@@ -670,14 +710,14 @@ async function keepAwake(on){
 /* =====================================================================
    Routing + render
    ===================================================================== */
-let route = {view:'observe', id:null};
+let route = {view:'home', id:null};
 function parseHash(){
   const h = (location.hash || '').replace('#', '');
-  const views = ['observe','students','sessions','graphs','about','live'];
+  const views = ['home','observe','students','sessions','graphs','about','live'];
   if(views.includes(h)) return {view:h, id:null};
-  return {view: liveSession() ? 'live' : 'observe', id:null};
+  return {view: liveSession() ? 'live' : 'home', id:null};
 }
-function go(view, id = null){ route = {view, id}; if(['observe','students','sessions','graphs','about','live'].includes(view)){ try { history.replaceState(null, '', '#' + view); } catch(e){} } render(); $('#main').focus({preventScroll:true}); window.scrollTo(0, 0); }
+function go(view, id = null){ route = {view, id}; if(['home','observe','students','sessions','graphs','about','live'].includes(view)){ try { history.replaceState(null, '', '#' + view); } catch(e){} } render(); $('#main').focus({preventScroll:true}); window.scrollTo(0, 0); }
 window.addEventListener('hashchange', () => { route = parseHash(); render(); });
 
 function render(){
@@ -696,7 +736,8 @@ function render(){
     case 'session': html += viewSession(route.id); break;
     case 'graphs': html += viewGraphs(); break;
     case 'about': html += viewAbout(); break;
-    default: html += viewObserve();
+    case 'observe': html += viewObserve(); break;
+    default: html += viewHome();
   }
   m.innerHTML = html;
   document.documentElement.style.setProperty('--hh', $('#topHeader').offsetHeight + 'px');
@@ -715,6 +756,33 @@ function renderLiveBar(){
    View: Observe (quick + planned start)
    ===================================================================== */
 let quickTpl = 0;
+const ICON = {
+  observe:'<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>',
+  students:'<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.3-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.8a3.3 3.3 0 0 1 0 6.4M18.5 14.8c1.6.8 2.6 2.5 3 5.2"/></svg>',
+  sessions:'<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>',
+  graphs:'<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 15l4-4.5 3 2.5 5-6"/></svg>',
+  about:'<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>'
+};
+function viewHome(){
+  const ls = liveSession();
+  const ended = sortedSessions(S.sessions.filter(s => s.status === 'ended'));
+  const nT = S.targets.filter(t => !t.archived).length;
+  const last = ended[0];
+  return `
+  <section class="stack" style="gap:6px"><h1>Welcome to Sightline</h1>
+    <p class="sub">Collect behavior observation data in real time, then review, graph, and export it. Use student codes only, never names.</p></section>
+  ${ls ? `<div class="notice warn" style="align-items:center;flex-wrap:wrap"><div style="flex:1 1 240px"><b>Observation in progress</b> for <span class="mono">${esc(stuById(ls.studentId)?.code)}</span> · ${esc(ls.setting)} · <span class="mono" data-clock>${fmtClock(Calc.observedMs(ls))}</span>${ls.status === 'paused' ? ' (paused)' : ''}</div><button class="primary" data-act="goLive" id="homeResume">Return to observation</button></div>` : ''}
+  <nav class="tiles" aria-label="Sightline sections">
+    <a class="tile go" href="#observe" id="tileObserve"><span class="tt">${ICON.observe}${ls ? 'Start another later' : 'Start an observation'}</span><span class="ts">Quick observation for one behavior, or a planned session with several targets.</span><span class="tn">Ready in under a minute</span></a>
+    <a class="tile" href="#students" id="tileStudents"><span class="tt">${ICON.students}Students</span><span class="ts">Student codes and the behaviors you measure.</span><span class="tn"><b>${S.students.length}</b>student${S.students.length === 1 ? '' : 's'} · ${nT} target${nT === 1 ? '' : 's'}</span></a>
+    <a class="tile" href="#sessions" id="tileSessions"><span class="tt">${ICON.sessions}Sessions</span><span class="ts">Review, correct, and export past observations.</span><span class="tn"><b>${ended.length}</b>completed${last ? ` · last ${fmtDate(last.date, true)}` : ''}</span></a>
+    <a class="tile" href="#graphs" id="tileGraphs"><span class="tt">${ICON.graphs}Graphs</span><span class="ts">Progress for one target across sessions, as a chart or table.</span></a>
+    <a class="tile" href="#about" id="tileAbout"><span class="tt">${ICON.about}About</span><span class="ts">How data is stored, calculation rules, and installing the app.</span></a>
+  </nav>
+  ${ended.length ? `<section class="panel" aria-labelledby="recentSesT"><header><h2 id="recentSesT">Recent sessions</h2><a href="#sessions" class="small">See all</a></header>
+    <div class="list">${ended.slice(0, 3).map(s => `<button class="lrow" data-act="openSession" data-id="${s.id}" id="hs_${s.id}"><span class="t mono">${esc(stuById(s.studentId)?.code)}</span><span>${fmtDate(s.date)}</span><span class="sub small">${esc(s.setting)}</span><span class="spacer"></span><span class="mono small">${fmtClock(Calc.observedMs(s))}</span></button>`).join('')}</div></section>` : ''}
+  <p class="small sub">Prototype for fictional data only. Data stays in this browser on this device.</p>`;
+}
 function viewObserve(){
   const ls = liveSession();
   const studs = S.students;
@@ -765,10 +833,10 @@ function viewObserve(){
     </form>
 
     <form class="panel" data-form="plan" aria-labelledby="pTitle">
-      <header><h2 id="pTitle">Planned session</h2><button type="button" class="ghost sm" data-act="planDemo">Fill with demo student</button></header>
+      <header><h2 id="pTitle">Planned session</h2></header>
       ${studs.length ? `
       <label class="f">Student
-        <select id="pStudent" name="studentId" data-act-change="planStudent">${studs.map(s => `<option value="${s.id}" ${s.id === plannedStu ? 'selected' : ''}>${esc(s.code)}${s.demo ? ' (demo)' : ''}</option>`).join('')}</select></label>
+        <select id="pStudent" name="studentId" data-act-change="planStudent">${studs.map(s => `<option value="${s.id}" ${s.id === plannedStu ? 'selected' : ''}>${esc(s.code)}${s.demo ? ' (sample)' : ''}</option>`).join('')}</select></label>
       <fieldset><legend>Targets to record</legend>
         ${pts.length ? pts.map(t => `<label class="check"><input type="checkbox" name="targets" value="${t.id}" id="pt_${t.id}" checked><span><b>${esc(t.name)}</b> <span class="chip">${METHODS[t.method].label}</span></span></label>`).join('')
           : `<p class="sub">This student has no targets yet. <button type="button" class="ghost sm" data-act="goStudents">Add targets</button></p>`}
@@ -790,7 +858,7 @@ function viewObserve(){
 function newSession({studentId, setting, observer, date, startTime, targetIds}){
   const now = Date.now();
   const sess = {id:uid('ses'), studentId, setting, observer, date, startTime, targetIds, status:'active', segments:[{s:now, e:null}], events:[], notes:'',
-    running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], createdAt:now, endedAt:null};
+    running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], markers:[], createdAt:now, endedAt:null};
   S.sessions.push(sess); S.ui.lastObserver = observer || S.ui.lastObserver; save();
   lastCompleted = {}; undoStack = [];
   keepAwake(true); cue(); // cue() here unlocks audio on iOS via user gesture
@@ -898,11 +966,12 @@ function viewLive(){
     </div>
   </section>
   ${paused ? `<div class="notice"><div>Observation is paused. Paused time is excluded from all timers, rates, and intervals. You can still fix entries.</div></div>` : ''}
+  ${contextBar(sess)}
   <div class="cards">${tgs.map((t, i) => targetCard(sess, t, i)).join('')}</div>
   <div class="grid2">
     <section class="panel" aria-labelledby="recentT"><header><h2 id="recentT">Recent entries</h2></header>
       ${recent.length ? `<div class="tablewrap"><table><thead><tr><th>Time</th><th>Target</th><th>Entry</th></tr></thead><tbody>
-      ${recent.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td>${esc(tgById(e.targetId)?.name)}</td><td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">undone</span>' : ''}</td></tr>`).join('')}
+      ${recent.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td>${esc(entryName(sess, e))}</td><td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">undone</span>' : ''}</td></tr>`).join('')}
       </tbody></table></div>` : `<p class="sub">Entries appear here as you record.</p>`}
     </section>
     <section class="panel" aria-labelledby="notesT"><header><h2 id="notesT">Session notes</h2></header>
@@ -910,6 +979,62 @@ function viewLive(){
       <p class="small sub">Keyboard: number keys run each card's main action (shown on the card). <kbd>P</kbd> pauses or resumes, <kbd>U</kbd> undoes the last entry.</p>
     </section>
   </div>`;
+}
+const CONTEXT_PRESETS = ['Teacher prompt','Peer interaction','Teacher praise','Redirection','Transition','Peer prompt'];
+function visibleMarkers(sess){ return (sess.markers || []).filter(m => !m.hidden); }
+function markerName(sess, id){ const m = (sess.markers || []).find(x => x.id === id); return m ? m.label : null; }
+function entryName(sess, e){ const t = tgById(e.targetId); if(t) return t.name; if(e.type === 'marker') return 'Context: ' + (markerName(sess, e.targetId) || e.data.label || ''); return ''; }
+function markerSummary(sess){
+  const obs = Calc.observedMs(sess); const min = obs / 60000;
+  return (sess.markers || []).map(m => { const ev = Calc.events(sess, m.id, 'marker'); return {m, n:ev.length, rate: min > 0 ? ev.length / min : null, times: ev.map(e => e.t).sort((a,b) => a-b)}; })
+    .filter(x => x.n > 0 || !x.m.hidden);
+}
+function contextBar(sess){
+  const ms = visibleMarkers(sess);
+  return `<section class="ctxbar" aria-labelledby="ctxT">
+    <div class="row" style="gap:8px"><h2 id="ctxT" class="eyebrow" style="font-size:.78rem">Context buttons</h2><span class="small sub">Optional. Add buttons for events you want to track, like teacher prompts or peer interactions.</span></div>
+    <div class="ctxbtns">
+      ${ms.map(m => { const n = Calc.events(sess, m.id, 'marker').length; return `<button class="ctxbtn" id="mk_${m.id}" data-act="mark" data-m="${m.id}" aria-label="Record ${esc(m.label)}. Count ${n}"><span>${esc(m.label)}</span><span class="n">${n}</span></button>`; }).join('')}
+      <button class="ghost" id="btnAddMarker" data-act="addMarker">+ Add context button</button>
+    </div>
+    ${ms.length ? `<div class="row" style="gap:8px"><button class="sm" id="btnUndoMarker" data-act="undoMarker" ${sess.events.some(e => e.type === 'marker' && !e.voided) ? '' : 'disabled'}>Undo last context tap</button><button class="sm ghost" id="btnManageMarkers" data-act="manageMarkers">Remove buttons</button></div>` : ''}
+  </section>`;
+}
+function addMarkerDialog(sess){
+  const used = new Set(visibleMarkers(sess).map(m => m.label.toLowerCase()));
+  const sugg = [...new Set([...(S.ui.markerLabels || []), ...CONTEXT_PRESETS])].filter(l => !used.has(l.toLowerCase())).slice(0, 10);
+  openDialog({title:'Add a context button',
+    body:`<p class="small sub">Each tap records the time. Counts and times appear in the session summary, timeline, CSV, and reports. They are not tied to a target behavior.</p>
+      ${sugg.length ? `<fieldset><legend>Suggestions</legend><div class="chips">${sugg.map((l, i) => `<button type="button" id="mkS${i}" data-sugg="${esc(l)}">${esc(l)}</button>`).join('')}</div></fieldset>` : ''}
+      <label class="f">Button label<input type="text" name="label" id="mkLabel" maxlength="40" required placeholder="e.g. Teacher prompt" autocomplete="off"><span class="hint">Describe the event, not a person. No names.</span></label><p class="fieldwarn" id="mkErr" role="alert"></p>`,
+    actions:[{label:'Cancel'}, {label:'Add button', kind:'primary', submit:true}],
+    onOpen: d => { d.querySelectorAll('[data-sugg]').forEach(b => b.addEventListener('click', () => { $('#mkLabel').value = b.dataset.sugg; d.querySelectorAll('[data-sugg]').forEach(x => x.setAttribute('aria-pressed', x === b)); $('#mkLabel').focus(); })); },
+    onSubmit: fd => {
+      const label = String(fd.get('label') || '').trim().replace(/\s+/g, ' ');
+      if(!label){ $('#mkErr').textContent = 'Enter a label or pick a suggestion.'; return false; }
+      if(visibleMarkers(sess).some(m => m.label.toLowerCase() === label.toLowerCase())){ $('#mkErr').textContent = 'That button is already on this session.'; return false; }
+      sess.markers = sess.markers || [];
+      const hidden = sess.markers.find(m => m.hidden && m.label.toLowerCase() === label.toLowerCase());
+      if(hidden) hidden.hidden = false; else sess.markers.push({id:uid('mk'), label});
+      S.ui.markerLabels = [label, ...(S.ui.markerLabels || []).filter(l => l.toLowerCase() !== label.toLowerCase())].slice(0, 8);
+      save(); render(); toast(`Added "${label}"`);
+      const m = visibleMarkers(sess).find(x => x.label === label) || {}; const b = document.getElementById('mk_' + m.id); b && b.focus({preventScroll:true});
+    }});
+}
+function manageMarkersDialog(sess){
+  const ms = visibleMarkers(sess);
+  openDialog({title:'Remove context buttons',
+    body:`<p class="small sub">Removing a button hides it from this observation. Taps already recorded are kept in the summary and timeline.</p>
+      <div class="list">${ms.map(m => `<div class="lrow"><span class="t">${esc(m.label)}</span><span class="small sub">${Calc.events(sess, m.id, 'marker').length} taps</span><span class="spacer"></span><button type="button" class="sm danger" data-rm="${m.id}" id="rm_${m.id}">Remove</button></div>`).join('')}</div>`,
+    actions:[{label:'Done', kind:'primary'}],
+    onOpen: d => d.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { const m = sess.markers.find(x => x.id === b.dataset.rm); m.hidden = true; save(); render(); b.closest('.lrow').remove(); toast(`Removed "${m.label}"`); }))
+  });
+}
+function contextSummaryHTML(sess){
+  const rows = markerSummary(sess).filter(x => x.n > 0); if(!rows.length) return '';
+  return `<section class="panel" aria-labelledby="ctxSumT"><header><h2 id="ctxSumT">Context events</h2><span class="small sub">Observer-added buttons. Not tied to a target behavior.</span></header>
+    <div class="tablewrap"><table><thead><tr><th>Event</th><th class="n">Count</th><th class="n">Per minute</th><th>Times (session time)</th></tr></thead><tbody>
+    ${rows.map(x => `<tr><td>${esc(x.m.label)}</td><td class="n">${x.n}</td><td class="n">${fmtNum(x.rate, 2)}</td><td class="mono small">${x.times.map(fmtClock).join(', ')}</td></tr>`).join('')}</tbody></table></div></section>`;
 }
 function keyChip(i){ return i < 9 ? `<kbd title="Keyboard shortcut">${i+1}</kbd>` : ''; }
 function targetCard(sess, t, i){
@@ -1024,6 +1149,7 @@ function describeEvent(e){
   const tg = tgById(e.targetId); const d = e.data;
   switch(e.type){
     case 'count': return 'Occurrence (+1)';
+    case 'marker': return `${d.label || 'Context event'} (context)`;
     case 'episode': return `Episode ${fmtClock(d.start)}–${fmtClock(d.end)} (${fmtDur(d.end - d.start)})${d.endedBy ? ', stopped at ' + d.endedBy : ''}`;
     case 'latency': return d.outcome === 'response' ? `Response after ${fmtNum((d.response - d.trigger)/1000, 1)} s` : d.outcome === 'timeout' ? `Timed out (no response within ${tg?.config.timeoutSec || '?'} s)` : d.outcome === 'incomplete' ? 'Incomplete: session ended before a response' : 'No response (observer marked)';
     case 'interval': { const w = INT_WORDS[tg?.method] || INT_WORDS.partial; const L = (tg?.config.intervalSec || 10); return `Interval ${d.index+1} (${fmtClock(d.index*L*1000)}–${fmtClock((d.index+1)*L*1000)}): ${d.value === 'yes' ? w.yes : d.value === 'no' ? w.no : 'not scored'}${d.notes ? ' · Note: ' + d.notes : ''}`; }
@@ -1085,7 +1211,7 @@ function viewStudents(){
     <section class="panel" aria-labelledby="stuT" style="align-self:start">
       <header><h2 id="stuT">Students</h2><button class="primary sm" data-act="newStudent" id="btnNewStu">Add student</button></header>
       ${S.students.length ? `<div class="list" role="list">${S.students.map(s => `<button class="lrow" role="listitem" data-act="selStudent" data-id="${s.id}" id="sel_${s.id}" aria-current="${s.id === sel}">
-        <span class="t mono">${esc(s.code)}</span>${s.grade ? `<span class="chip">Grade ${esc(s.grade)}</span>` : ''}${s.demo ? '<span class="chip mark">Demo</span>' : ''}<span class="spacer"></span><span class="small sub">${S.targets.filter(t => t.studentId === s.id && !t.archived).length} targets</span></button>`).join('')}</div>`
+        <span class="t mono">${esc(s.code)}</span>${s.grade ? `<span class="chip">Grade ${esc(s.grade)}</span>` : ''}${s.demo ? '<span class="chip mark">Sample</span>' : ''}<span class="spacer"></span><span class="small sub">${S.targets.filter(t => t.studentId === s.id && !t.archived).length} targets</span></button>`).join('')}</div>`
       : `<div class="empty">No students yet.</div>`}
     </section>
     <section class="panel" aria-labelledby="tgT">
@@ -1214,9 +1340,10 @@ function viewSession(id){
     <label class="f">Notes<textarea id="sesNotes" data-input="sesNotesDetail" data-id="${s.id}">${esc(s.notes)}</textarea><span class="hint">Saved as you type. No names or identifying details.</span></label>
   </section>
   ${tgs.map(t => targetSummary(s, t)).join('')}
+  ${contextSummaryHTML(s)}
   <section class="panel" aria-labelledby="tlT"><header><h2 id="tlT">Timeline</h2><span class="small sub">${evs.length} entries · edits keep the original timestamp and a history</span></header>
     ${evs.length ? `<div class="tablewrap"><table><thead><tr><th class="n">Session time</th><th>Clock</th><th>Target</th><th>Entry</th><th><span class="srOnly">Actions</span></th></tr></thead><tbody>
-    ${evs.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td class="n">${fmtWall(e.wall)}</td><td>${esc(tgById(e.targetId)?.name)}</td>
+    ${evs.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td class="n">${fmtWall(e.wall)}</td><td>${esc(entryName(s, e))}</td>
       <td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">voided</span>' : ''}${e.history.length ? `<details class="hist keep"><summary>History (${e.history.length})</summary><ul>${e.history.map(h => `<li>${new Date(h.at).toLocaleString()}: ${h.action}${h.changes ? ' ' + Object.entries(h.changes).map(([k, v]) => `${esc(k)} ${esc(fmtVal(v.from))} → ${esc(fmtVal(v.to))}`).join('; ') : ''}${h.reason ? ` (${esc(h.reason)})` : ''}</li>`).join('')}</ul></details>` : ''}</td>
       <td class="keep"><div class="row" style="gap:4px;flex-wrap:nowrap">${e.voided ? `<button class="sm" data-act="restoreEv" data-s="${s.id}" data-e="${e.id}" id="re_${e.id}">Restore</button>` : `<button class="sm" data-act="editEv" data-s="${s.id}" data-e="${e.id}" id="ee_${e.id}">Edit</button><button class="sm danger" data-act="voidEv" data-s="${s.id}" data-e="${e.id}" id="ve_${e.id}">Void</button>`}</div></td></tr>`).join('')}
     </tbody></table></div>` : `<div class="empty">No entries were recorded.</div>`}
@@ -1279,6 +1406,8 @@ function narrative(s){
       case 'abc': parts.push(`${r.count} ABC entr${r.count === 1 ? 'y was' : 'ies were'} recorded for ${n.toLowerCase()}; antecedents and consequences are listed in the ABC table.`); break;
     }
   }
+  const ctx = markerSummary(s).filter(x => x.n > 0);
+  if(ctx.length) parts.push(`Context events recorded by the observer: ${ctx.map(x => `${x.m.label.toLowerCase()} ${x.n} time${x.n === 1 ? '' : 's'} (${fmtNum(x.rate, 2)} per minute)`).join('; ')}.`);
   if(s.notes) parts.push(`Observer notes: ${s.notes}`);
   return parts.join(' ');
 }
@@ -1423,10 +1552,10 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.1.0-2026-11-01</p></section>
+    </ul><p class="small sub">Version 1.3.0-2026-11-05</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
-    <div class="row"><button data-act="resetDemo" id="btnResetDemo">Reload demo data</button><button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
-    <p class="small sub">Reloading demo data replaces the demo students but keeps students you added.</p></section>`;
+    <div class="row">${S.students.some(x => x.demo) ? `<button data-act="removeSample" id="btnRemoveSample">Remove sample data</button>` : `<button data-act="loadSample" id="btnLoadSample">Load sample data</button>`}<button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
+    <p class="small sub">Sample data adds two fictional students (SAMPLE-01 and SAMPLE-02) with practice sessions for every recording method, for testing or training. Your own students are not changed.</p></section>`;
 }
 
 /* =====================================================================
@@ -1452,7 +1581,7 @@ function eventRows(sessions, onlyTarget){
     for(const e of s.events.slice().sort((a,b) => a.t - b.t)){
       if(onlyTarget && e.targetId !== onlyTarget) continue;
       const t = tgById(e.targetId); const d = e.data;
-      rows.push([s.id, stuById(s.studentId)?.code, s.date, s.setting, s.observer, t?.name, t ? METHODS[t.method].label : '', e.type, fmtNum(e.t/1000, 1), new Date(e.wall).toISOString(), e.voided ? 'voided' : 'active', e.history.length,
+      rows.push([s.id, stuById(s.studentId)?.code, s.date, s.setting, s.observer, entryName(s, e), t ? METHODS[t.method].label : (e.type === 'marker' ? 'Context button' : ''), e.type, fmtNum(e.t/1000, 1), new Date(e.wall).toISOString(), e.voided ? 'voided' : 'active', e.history.length,
         e.type === 'interval' ? d.index + 1 : '', e.type === 'interval' ? (d.value || 'unscored') : e.type === 'trial' ? d.result : '',
         e.type === 'episode' ? fmtNum((d.end - d.start)/1000, 1) : '', e.type === 'latency' && d.outcome === 'response' ? fmtNum((d.response - d.trigger)/1000, 1) : '',
         e.type === 'latency' ? d.outcome : '', e.type === 'ta_run' ? (d.steps || []).map((st, i) => `${st}: ${LEVEL_LABEL[d.scores[i]] || 'not scored'}`).join(' | ') : '',
@@ -1514,7 +1643,9 @@ function sessionReportHTML(s){
     h += `</div>`;
   }
   const evs = s.events.slice().sort((a,b) => a.t - b.t);
-  if(evs.length) h += `<h2>Timeline</h2>` + hT(['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), tgById(e.targetId)?.name || '', describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]));
+  if(evs.length) h += `<h2>Timeline</h2>` + hT(['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), entryName(s, e), describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]));
+  const ctxR = markerSummary(s).filter(x => x.n > 0);
+  if(ctxR.length) h += `<h2>Context events</h2><p class="muted">Observer-added buttons. Not tied to a target behavior.</p>` + hT(['Event','Count','Per minute','Times (session time)'], ctxR.map(x => [x.m.label, x.n, fmtNum(x.rate, 2), x.times.map(fmtClock).join(', ')]));
   if(s.notes) h += `<h2>Notes</h2><p>${esc(s.notes)}</p>`;
   return h;
 }
@@ -1549,7 +1680,9 @@ async function pdfSession(id){
     if(hist.length >= 2){ pdfP(ctx, `Trend for ${t.name} through this session:`); await pdfChart(ctx, trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT})); }
   }
   const evs = s.events.slice().sort((a,b) => a.t - b.t);
-  if(evs.length){ pdfH(ctx, 'Timeline'); pdfTable(ctx, ['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), tgById(e.targetId)?.name || '', describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]), {styles:{fontSize:7.5, cellPadding:3}}); }
+  if(evs.length){ pdfH(ctx, 'Timeline'); pdfTable(ctx, ['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), entryName(s, e), describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]), {styles:{fontSize:7.5, cellPadding:3}}); }
+  const ctxP = markerSummary(s).filter(x => x.n > 0);
+  if(ctxP.length){ pdfH(ctx, 'Context events'); pdfTable(ctx, ['Event','Count','Per minute','Times (session time)'], ctxP.map(x => [x.m.label, x.n, fmtNum(x.rate, 2), x.times.map(fmtClock).join(', ')])); }
   if(s.notes){ pdfH(ctx, 'Notes'); pdfP(ctx, s.notes); }
   pdfFooter(ctx.doc);
   const blob = ctx.doc.output('blob');
@@ -1578,7 +1711,7 @@ function editEventDialog(s, e){
   const t = tgById(e.targetId); const d = e.data;
   let fields = '';
   switch(e.type){
-    case 'count': fields = `<p class="sub">An occurrence has no values to change. Void it if it was recorded by mistake.</p><label class="f">Note<input type="text" name="notes" id="edNotes" value="${esc(d.notes || '')}"></label>`; break;
+    case 'marker': case 'count': fields = `<p class="sub">An occurrence has no values to change. Void it if it was recorded by mistake.</p><label class="f">Note<input type="text" name="notes" id="edNotes" value="${esc(d.notes || '')}"></label>`; break;
     case 'episode': fields = `<div class="fields"><label class="f">Start (m:ss session time)<input type="text" name="start" id="edStart" value="${fmtClock(d.start)}" required></label><label class="f">End (m:ss)<input type="text" name="end" id="edEnd" value="${fmtClock(d.end)}" required></label></div>`; break;
     case 'latency': fields = `<label class="f">Outcome<select name="outcome" id="edOutcome">${['response','no_response','timeout','incomplete'].map(o => `<option value="${o}" ${d.outcome === o ? 'selected' : ''}>${{response:'Response', no_response:'No response', timeout:'Timed out', incomplete:'Incomplete'}[o]}</option>`).join('')}</select></label>
       <label class="f">Latency in seconds (responses only)<input type="number" step="0.1" min="0" name="lat" id="edLat" value="${d.outcome === 'response' ? fmtNum((d.response - d.trigger)/1000, 1) : ''}"></label>`; break;
@@ -1587,7 +1720,7 @@ function editEventDialog(s, e){
     case 'ta_run': fields = (d.steps || t.config.steps || []).map((stp, k) => `<label class="f">${k+1}. ${esc(stp)}<select name="s${k}" id="edS${k}"><option value="">Not scored</option>${LEVELS.map(l => `<option value="${l.k}" ${d.scores[k] === l.k ? 'selected' : ''}>${l.label}</option>`).join('')}</select></label>`).join(''); break;
     case 'abc': fields = ['context','antecedent','behavior','consequence','notes'].map(k => `<label class="f">${k[0].toUpperCase() + k.slice(1)}<input type="text" name="${k}" id="ed_${k}" value="${esc(d[k] || '')}"></label>`).join(''); break;
   }
-  openDialog({title:`Edit entry · ${t?.name || ''}`,
+  openDialog({title:`Edit entry · ${entryName(s, e)}`,
     body:`<p class="small sub">Recorded at ${fmtClock(e.t)} session time (${new Date(e.wall).toLocaleString()}). The original time stays the same, and this change is added to the entry's history.</p>${fields}
       <label class="f">Reason for change (optional)<input type="text" name="reason" id="edReason" placeholder="e.g. Tapped wrong button"></label><p class="fieldwarn" id="edErr" role="alert"></p>`,
     actions:[{label:'Cancel'}, {label:'Save change', kind:'primary', submit:true}],
@@ -1611,11 +1744,15 @@ function editEventDialog(s, e){
    Actions
    ===================================================================== */
 const A = {
-  goLive(){ go('live'); }, goObserve(){ go('observe'); }, goStudents(){ go('students'); }, goSessions(){ go('sessions'); },
+  goLive(){ go('live'); }, goObserve(){ go('observe'); }, goHome(){ go('home'); }, goStudents(){ go('students'); }, goSessions(){ go('sessions'); },
   quickTpl(el){ quickTpl = +el.dataset.i; const t = TEMPLATES[quickTpl]; $('#qName').value = t.name; $('#qDef').value = t.def; $('#qMethod').value = t.method; $('#qInt').value = t.intervalSec || 10; $$('[data-act="quickTpl"]').forEach(b => b.setAttribute('aria-pressed', b === el)); },
-  planDemo(){ S.ui.planStudent = 'stu_demo1'; S.ui.planSetting = 'Mock observation – demo'; render(); toast('Demo student selected with every target'); },
   pause(){ pauseSession(liveSession()); }, resume(){ resumeSession(liveSession()); }, undo(){ undoLast(liveSession()); },
   end(){ const s = liveSession(); confirmDialog('End observation?', 'Timers stop and any running duration timer is closed at the current time. You can still edit entries afterward.', 'End observation', () => endSession(s), false); },
+  mark(el){ const s = liveSession(); const m = s.markers.find(x => x.id === el.dataset.m); record(s, m.id, 'marker', {label:m.label}); render(); },
+  addMarker(){ addMarkerDialog(liveSession()); },
+  manageMarkers(){ manageMarkersDialog(liveSession()); },
+  undoMarker(){ const s = liveSession(); const last = s.events.filter(e => e.type === 'marker' && !e.voided).sort((a,b) => a.wall - b.wall).pop(); if(!last) return;
+    voidEvent(last, 'Undone during session'); undoStack = undoStack.filter(u => u.evId !== last.id); render(); toast(`Undid ${last.data.label}`); },
   count(el){ const s = liveSession(); record(s, el.dataset.t, 'count', {}); render(); },
   undoTarget(el){ const s = liveSession(); const tid = el.dataset.t; const t = tgById(tid);
     const type = {frequency:'count', duration:'episode', latency:'latency', percent:'trial'}[t.method];
@@ -1681,10 +1818,10 @@ const A = {
       actions:[{label:'Cancel'}, {label:'Void entry', kind:'danger solid', submit:true}], onSubmit: fd => { voidEvent(e, fd.get('reason')); render(); toast('Entry voided'); }}); },
   restoreEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e); restoreEvent(e, 'Restored in review'); render(); toast('Entry restored'); },
   gview(el){ S.ui.graph = S.ui.graph || {}; S.ui.graph.view = el.dataset.v; save(); render(); },
-  resetDemo(){ confirmDialog('Reload demo data?', 'Demo students, targets, and sessions return to their original state. Students you added are kept.', 'Reload demo data', () => {
-    const demoS = new Set(S.students.filter(s => s.demo).map(s => s.id)); S.students = S.students.filter(s => !s.demo); S.targets = S.targets.filter(t => !t.demo && !demoS.has(t.studentId)); S.sessions = S.sessions.filter(s => !s.demo && !demoS.has(s.studentId));
-    const d = seedDemo(emptyState()); S.students.unshift(...d.students); S.targets.unshift(...d.targets); S.sessions.push(...d.sessions); save(); render(); toast('Demo data reloaded'); }, false); },
-  clearAll(){ confirmDialog('Delete all data?', 'Every student, target, and session in this browser will be permanently deleted. This cannot be undone.', 'Delete everything', () => { S = emptyState(); save(); go('observe'); toast('All data deleted'); }); }
+  loadSample(){ loadSampleData(); render(); toast('Sample data added'); },
+  removeSample(){ if(liveSession() && stuById(liveSession().studentId)?.demo){ toast('End the observation for the sample student first.'); return; }
+    confirmDialog('Remove sample data?', 'The fictional sample students, their targets, and all of their sessions will be deleted, including any practice sessions you recorded for them. Your own students are not changed.', 'Remove sample data', () => { removeSampleData(); save(); render(); toast('Sample data removed'); }); },
+  clearAll(){ confirmDialog('Delete all data?', 'Every student, target, and session in this browser will be permanently deleted. This cannot be undone.', 'Delete everything', () => { S = emptyState(); save(); go('home'); toast('All data deleted'); }); }
 };
 
 function studentDialog(st){
@@ -1814,8 +1951,10 @@ document.addEventListener('visibilitychange', () => { const s = liveSession(); i
 (function boot(){
   Store.probe();
   S = Store.load();
-  if(!S || S.version !== 1){ S = seedDemo(emptyState()); save(); }
+  if(!S || S.version !== 1){ S = emptyState(); S.ui.sampleCleared = true; save(); }
   S.ui = Object.assign(emptyState().ui, S.ui || {});
+  // One-time cleanup: earlier versions added demo students automatically. Sample data is now opt-in (About page).
+  if(!S.ui.sampleCleared){ if(!(liveSession() && stuById(liveSession().studentId)?.demo)){ removeSampleData(); S.ui.sampleCleared = true; save(); } }
   route = parseHash();
   render(); startTicker();
   window.addEventListener('resize', () => document.documentElement.style.setProperty('--hh', $('#topHeader').offsetHeight + 'px'));
