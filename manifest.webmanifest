@@ -1,7 +1,7 @@
 {
   "name": "Sightline Behavior Observation",
   "short_name": "Sightline",
-  "description": "Behavior observation data collection for school psychologists. Prototype for fictional data only.",
+  "description": "Behavior observation data collection for school psychologists.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

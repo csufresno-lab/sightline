@@ -14,7 +14,7 @@
 </head><body>
 <title>Sightline</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Sightline: a behavior observation data collection prototype for school psychologists. Fictional data only.">
+<meta name="description" content="Sightline: behavior observation data collection for school psychologists.">
 <style>
 /* Layout: app shell with a sticky header + nav; content column up to 1180px; live view is a responsive grid of target cards with large tap targets. */
 :root{
@@ -22,6 +22,7 @@
   --accent:#0A6365; --accent-2:#07484A; --accent-soft:#D2E9E7; --on-accent:#FFFFFF;
   --mark:#8A4C00; --mark-soft:#FBE9CC; --ok:#1C6737; --ok-soft:#DAEEDF; --bad:#A0242B; --bad-soft:#F6DCDD;
   --focus:#1F4FD6; --chart-grid:#D9E2E0;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s-other:#9a9893;
   --f-ui:"Atkinson Hyperlegible","Segoe UI",system-ui,-apple-system,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
   --r:10px; --tap:56px;
@@ -30,12 +31,12 @@
   --bg:#0D1618; --surface:#142124; --sunk:#1B2B2F; --ink:#E3EBEA; --ink-2:#A2B3B2; --line:#2E4246;
   --accent:#5BC1BE; --accent-2:#8BD7D4; --accent-soft:#153B3C; --on-accent:#05201F;
   --mark:#F0B25A; --mark-soft:#3A2A12; --ok:#7ED299; --ok-soft:#163120; --bad:#F2888D; --bad-soft:#3A1C1E;
-  --focus:#93B4FF; --chart-grid:#26383C; color-scheme:dark }}
+  --focus:#93B4FF; --chart-grid:#26383C; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s-other:#6f6e69; color-scheme:dark }}
 :root[data-theme="dark"]{
   --bg:#0D1618; --surface:#142124; --sunk:#1B2B2F; --ink:#E3EBEA; --ink-2:#A2B3B2; --line:#2E4246;
   --accent:#5BC1BE; --accent-2:#8BD7D4; --accent-soft:#153B3C; --on-accent:#05201F;
   --mark:#F0B25A; --mark-soft:#3A2A12; --ok:#7ED299; --ok-soft:#163120; --bad:#F2888D; --bad-soft:#3A1C1E;
-  --focus:#93B4FF; --chart-grid:#26383C; color-scheme:dark }
+  --focus:#93B4FF; --chart-grid:#26383C; --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s-other:#6f6e69; color-scheme:dark }
 
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
@@ -186,6 +187,14 @@ button.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
 .cell.note{position:relative}
 .cell.note::after{content:"";position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--mark);box-shadow:0 0 0 1.5px var(--surface)}
 .legend .notedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mark);vertical-align:middle;margin-right:4px}
+.cell.off{background:transparent;border-style:dotted;color:var(--ink-2);opacity:.6}
+.tcard.peer{border-style:dashed;background:linear-gradient(var(--surface),var(--surface)) padding-box}
+.tcard.peer h3::before{content:"";}
+.chip.peer{background:var(--sunk);color:var(--ink);border:1px dashed var(--ink-2)}
+.trow{display:flex;flex-wrap:wrap;align-items:center;gap:0 18px;border-bottom:1px solid var(--line);padding:2px 0}
+.trow:last-child{border-bottom:0}
+.trow .peerchk{font-size:.9rem;color:var(--ink-2);min-height:36px;margin-left:32px}
+.peerinfo{border-radius:10px;background:var(--sunk);padding:10px 12px;font-size:.92rem}
 .cell.cur{border-style:dashed;border-color:var(--mark);color:var(--mark);background:var(--surface)}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--ink-2);align-items:center}
 .legend .cell{width:20px;height:20px;min-height:20px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;cursor:default}
@@ -201,6 +210,8 @@ button.no{background:var(--surface);color:var(--ink);border-color:var(--ink-2)}
 /* charts */
 .chart svg{width:100%;max-width:860px;height:auto;display:block}
 .chart text{fill:var(--ink-2);font-family:var(--f-ui)}
+.chart text.strong{fill:var(--ink)}
+.gtypes{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
 /* dialog */
 dialog{border:0;border-radius:14px;padding:0;max-width:min(560px,calc(100vw - 24px));width:100%;background:var(--surface);color:var(--ink);box-shadow:0 20px 60px -20px rgba(0,0,0,.5)}
@@ -227,6 +238,43 @@ dialog form{padding:20px;display:flex;flex-direction:column;gap:14px;max-height:
 details.hist summary{cursor:pointer;color:var(--accent);font-size:.82rem}
 details.hist ul{margin:4px 0 0;padding-left:18px;font-size:.82rem;color:var(--ink-2)}
 .srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* live: calmer layout */
+.notebar{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.noteform{display:flex;gap:8px;flex-wrap:wrap}
+.noteform input{flex:1 1 260px;min-width:0}
+.barrow{gap:6px;align-items:center}
+.pill{min-height:36px;padding:4px 12px;border-radius:999px;font-size:.88rem;font-weight:700}
+.pill.ctx{background:var(--mark-soft);border-color:var(--mark)}
+.pill.ctx b{color:var(--mark);margin-left:4px}
+.notelog{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;font-size:.88rem}
+.cards .tcard{gap:10px;padding:12px 14px}
+.tcard header .hv{display:flex;flex-direction:column;align-items:flex-end;gap:0;text-align:right}
+.tcard.paired header .hv{flex-direction:row;gap:12px;align-items:baseline}
+.tcard .hv b{font-size:1.25rem}
+.tcard.hasactive{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.currow{display:flex;gap:8px;flex-wrap:wrap}
+.currow button{flex:1 1 120px;min-height:48px}
+.currow button.on{background:var(--mark);border-color:var(--mark);color:var(--surface)}
+.prompt .slot{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:6px;align-items:center}
+.prompt .slot .who{font-weight:700;font-size:.9rem;min-width:58px}
+.prompt .slot:not(:has(.who)){grid-template-columns:repeat(3,minmax(0,1fr))}
+.prompt .slot button{min-height:48px;padding-inline:6px}
+.prompt .slot.keyslot{outline:2px solid var(--accent);outline-offset:3px;border-radius:8px}
+.prompt.active{box-shadow:inset 4px 0 0 var(--accent)}
+.prompt .answered{background:var(--surface);border-radius:999px;padding:2px 10px;font-weight:700}
+.tcard details.rec summary,.tcard details.def summary{font-size:.85rem;color:var(--ink-2);cursor:pointer;min-height:30px;display:flex;align-items:center}
+.tcard details.rec[open]{display:flex;flex-direction:column;gap:6px}
+.pairgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pairgrid .col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pairgrid .who{font-weight:700;font-size:.85rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
+.pairgrid .big{font-size:1rem}
+.pairgrid .big.count{min-height:72px;padding:8px 12px}
+.pairgrid .big.count .n{font-size:1.6rem}
+details.recent{padding-block:6px;gap:10px}
+details.recent:not([open]){gap:0}
+details.recent summary{cursor:pointer;min-height:40px;display:flex;align-items:center;gap:6px}
+.keyhelp{margin:-6px 0 0}
+@media (max-width:720px){.keyhelp{display:none}}
 /* home dashboard */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
 .tile{display:flex;flex-direction:column;gap:6px;min-height:132px;padding:18px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none}
@@ -255,7 +303,6 @@ details.hist ul{margin:4px 0 0;padding-left:18px;font-size:.82rem;color:var(--in
         <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="8" fill="var(--accent)"/><path d="M6 15c2.6-4.4 5.6-6.6 9-6.6s6.4 2.2 9 6.6c-2.6 4.4-5.6 6.6-9 6.6S8.6 19.4 6 15z" fill="none" stroke="var(--on-accent)" stroke-width="2"/><circle cx="15" cy="15" r="2.8" fill="var(--on-accent)"/></svg>
         Sightline
       </a>
-      <span class="proto" title="Prototype for testing with fictional students only">Prototype · fictional data</span>
       <nav class="tabs" aria-label="Main">
         <a href="#home" data-nav="home">Home</a>
         <a href="#observe" data-nav="observe">Observe</a>
@@ -275,8 +322,8 @@ details.hist ul{margin:4px 0 0;padding-left:18px;font-size:.82rem;color:var(--in
 <script>
 "use strict";
 /* =====================================================================
-   Sightline — behavior observation prototype
-   All data stays in this browser (localStorage). Fictional students only.
+   Sightline — behavior observation app
+   All data stays in this browser (localStorage). Student codes only.
    ===================================================================== */
 
 const STORE_KEY = 'sightline.v1';
@@ -420,16 +467,17 @@ const Calc = {
         const map = this.intervalMap(sess, tg.id);
         const idxs = Object.keys(map).map(Number);
         const total = Math.max(completed, idxs.length ? Math.max(...idxs) + 1 : 0);
-        let yes = 0, no = 0;
-        for(let i = 0; i < total; i++){ if(map[i] === 'yes') yes++; else if(map[i] === 'no') no++; }
-        const scored = yes + no, unscored = total - scored;
+        const N = (sess.peerEvery && sess.peerEvery[tg.id]) || 1; const sch = i => N <= 1 || (i + 1) % N === 0;
+        let yes = 0, no = 0, sched = 0;
+        for(let i = 0; i < total; i++){ if(!sch(i)) continue; sched++; if(map[i] === 'yes') yes++; else if(map[i] === 'no') no++; }
+        const scored = yes + no, unscored = sched - scored;
         const w = INT_WORDS[tg.method];
-        const cells = []; for(let i = 0; i < total; i++) cells.push(map[i] || null);
+        const cells = []; for(let i = 0; i < total; i++) cells.push(sch(i) ? (map[i] || null) : 'off');
         const idata = this.intervalData(sess, tg.id);
         const notes = []; for(let i = 0; i < total; i++) notes.push((idata[i] && idata[i].notes) || '');
         o.notes = notes; o.noteCount = notes.filter(Boolean).length;
-        Object.assign(o, {num:yes, den:scored, scale:100, value: scored ? yes/scored*100 : null, big: scored ? fmtNum(yes/scored*100, 0) + '%' : '—', bigLabel:'of scored intervals', yes, no, scored, unscored, total, completed, cells, L});
-        o.rows = [['Interval length', `${L/1000} s`], ['Intervals in session', String(total)],
+        Object.assign(o, {num:yes, den:scored, scale:100, value: scored ? yes/scored*100 : null, big: scored ? fmtNum(yes/scored*100, 0) + '%' : '—', bigLabel:'of scored intervals', yes, no, scored, unscored, total, completed, cells, L, every:N, sched});
+        o.rows = [['Interval length', `${L/1000} s`], N > 1 ? ['Peer intervals', `${sched} (${ordinalEvery(N)} of ${total})`] : ['Intervals in session', String(total)],
           ['Scored', String(scored)], [`Scored "${w.yes}"`, String(yes)], [`Scored "${w.no}"`, String(no)],
           ['Not scored (excluded, not counted as absent)', String(unscored)],
           ['Percent', scored ? `${yes} ÷ ${scored} scored = ${fmtNum(yes/scored*100, 1)}%` : '—']];
@@ -500,6 +548,7 @@ function seedDemo(st){
     T('tg_d2','stu_demo1','Tantrum','duration', TEMPLATES[5].def, {}, {value:5, text:'Under 5% of observed time'}),
     T('tg_d3','stu_demo1','Follows first direction','latency', TEMPLATES[6].def, {timeoutSec:30}, {value:10, text:'Begins within 10 s'}),
     T('tg_d4','stu_demo1','Off-task','mts', TEMPLATES[0].def, {intervalSec:15, cue:true}, {value:20, text:'20% of intervals or fewer'}),
+    Object.assign(T('tg_d4p','stu_demo1','Off-task (peer)','mts', TEMPLATES[0].def, {intervalSec:15, cue:true}), {peerOf:'tg_d4'}),
     T('tg_d5','stu_demo1','Disruption','partial', TEMPLATES[4].def, {intervalSec:10, cue:true}),
     T('tg_d6','stu_demo1','Seated work','whole', TEMPLATES[7].def, {intervalSec:15, cue:true}, {value:70, text:'70% of intervals'}),
     T('tg_d7','stu_demo1','Sight-word reading','percent','Reads the presented sight word aloud correctly within 3 seconds.', {allowPrompted:true}, {value:80, text:'80% independent across 3 sessions'}),
@@ -527,11 +576,11 @@ function seedDemo(st){
     const pauseAt = k === 2 ? 8*60000 : null, pauseLen = 3*60000;
     const segs = pauseAt ? [{s:startWall, e:startWall + pauseAt}, {s:startWall + pauseAt + pauseLen, e:startWall + obs + pauseLen}] : [{s:startWall, e:startWall + obs}];
     const wallOf = t => startWall + t + (pauseAt && t > pauseAt ? pauseLen : 0);
-    const ids = ['tg_d1','tg_d4','tg_d9','tg_d7'];
+    const ids = ['tg_d1','tg_d4','tg_d4p','tg_d9','tg_d7'];
     if(k !== 1) ids.push('tg_d2','tg_d3','tg_d6');
     if(k >= 2) ids.push('tg_d5','tg_d8');
     const sess = {id:'ses_demo1_' + k, studentId:'stu_demo1', setting:settings[k % 3], observer:observers[k % 2], date, startTime:startHM, targetIds:ids,
-      status:'ended', segments:segs, events:[], notes: k === 0 ? 'Baseline observation. Substitute teacher in the room for the first 5 minutes.' : (k === 2 ? 'Paused 3 minutes for a fire-drill announcement.' : ''),
+      status:'ended', segments:segs, events:[], peerEvery:{tg_d4p:5}, notes: k === 0 ? 'Baseline observation. Substitute teacher in the room for the first 5 minutes.' : (k === 2 ? 'Paused 3 minutes for a fire-drill announcement.' : ''),
       running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], demo:true, createdAt:startWall, endedAt:startWall + obs};
     const add = (tid, type, t, data, extra = {}) => sess.events.push({id:uid('ev'), targetId:tid, type, t, wall:wallOf(t), data, voided:false, history:[], ...extra});
     // frequency: trend downward
@@ -562,6 +611,7 @@ function seedDemo(st){
       }
     };
     scoreIntervals('tg_d4', 15, .62 - k*.08);
+    for(let i = 4; i < Math.floor(obs / 15000); i += 5) add('tg_d4p', 'interval', (i+1) * 15000, {index:i, value: R() < .14 ? 'yes' : 'no'});
     const demoNotes = {0:[[2,'Looked out the window when the hallway got loud.'],[9,'Drawing on the desk instead of the worksheet.']], 3:[[5,'Teacher was helping another student; looked around the room.']], 5:[[12,'Back on task after teacher proximity.']]};
     for(const [i, n] of (demoNotes[k] || [])){ const e = sess.events.find(x => x.targetId === 'tg_d4' && x.type === 'interval' && x.data.index === i); if(e) e.data.notes = n; }
     if(ids.includes('tg_d5')) scoreIntervals('tg_d5', 10, .45 - k*.05);
@@ -572,7 +622,7 @@ function seedDemo(st){
     if(ids.includes('tg_d8')){
       for(let run = 0; run < 2; run++){
         const scores = [0,1,2,3,4].map(() => { const r = R() + k*.08; return r > .85 ? 'I' : r > .65 ? 'G' : r > .45 ? 'V' : r > .3 ? 'M' : 'PP'; });
-        add('tg_d8','ta_run', 20000 + run * 300000, {scores, steps:tg[7].config.steps.slice()});
+        add('tg_d8','ta_run', 20000 + run * 300000, {scores, steps:tg.find(x => x.id === 'tg_d8').config.steps.slice()});
       }
     }
     // ABC
@@ -623,7 +673,50 @@ const stuById = id => S.students.find(s => s.id === id);
 const tgById = id => S.targets.find(t => t.id === id);
 const sesById = id => S.sessions.find(s => s.id === id);
 const liveSession = () => S.sessions.find(s => s.status === 'active' || s.status === 'paused');
-const targetsFor = sid => S.targets.filter(t => t.studentId === sid && !t.archived);
+const targetsFor = sid => S.targets.filter(t => t.studentId === sid && !t.archived && !t.peerOf);
+/* ---------- peer comparison ---------- */
+const PEER_EVERY = [[1,'Every interval'],[2,'Every 2nd interval'],[3,'Every 3rd interval'],[4,'Every 4th interval'],[5,'Every 5th interval'],[10,'Every 10th interval']];
+const ordinalEvery = n => (PEER_EVERY.find(x => x[0] === n) || [n, `Every ${n}th interval`])[1].toLowerCase();
+function peerTwin(t){ // one reusable "peer" record per target so peer data can be graphed across sessions
+  let p = S.targets.find(x => x.peerOf === t.id);
+  if(!p){ p = {id:uid('tg'), studentId:t.studentId, peerOf:t.id, goal:{}, archived:false}; S.targets.push(p); }
+  Object.assign(p, {name:`${t.name} (peer)`, method:t.method, definition:t.definition, config:JSON.parse(JSON.stringify(t.config || {}))});
+  return p;
+}
+function peerIn(sess, t){ return sess.targetIds.map(tgById).find(x => x && x.peerOf === t.id) || null; }
+function peerEveryOf(sess, t){ return (sess.peerEvery && sess.peerEvery[t.id]) || 1; }
+function isScheduled(sess, t, k){ const N = peerEveryOf(sess, t); return N <= 1 || (k + 1) % N === 0; }
+function metricText(r, t){
+  if(r.value == null) return '—';
+  switch(t.method){
+    case 'frequency': return `${fmtNum(r.value, 2)} per min (${r.count} in ${fmtNum(r.obs/60000, 1)} min)`;
+    case 'duration': return `${fmtNum(r.value, 1)}% of time (${fmtDur(r.total)})`;
+    case 'latency': return `${fmtNum(r.value, 1)} s mean (${r.responded} responses)`;
+    case 'abc': return `${r.count} entries`;
+    default: return `${fmtNum(r.value, 1)}% (${r.num} of ${r.den})`;
+  }
+}
+function metricDiff(a, b, t){
+  if(a.value == null || b.value == null) return '—';
+  const d = a.value - b.value; const sign = d > 0 ? '+' : d < 0 ? '−' : '';
+  const u = {frequency:' per min', latency:' s', abc:' entries'}[t.method] ?? ' percentage points';
+  return `${sign}${fmtNum(Math.abs(d), t.method === 'frequency' ? 2 : 1)}${u}`;
+}
+function peerPairs(sess){ return sess.targetIds.map(tgById).filter(t => t && !t.peerOf).map(t => ({t, p: peerIn(sess, t)})).filter(x => x.p); }
+function peerComparisonHTML(sess){
+  const pairs = peerPairs(sess); if(!pairs.length) return '';
+  return `<section class="panel" aria-labelledby="peerT"><header><h2 id="peerT">Peer comparison</h2><span class="small sub">Target student compared with a peer observed in the same session</span></header>
+    <div class="tablewrap"><table><thead><tr><th>Target</th><th>Method</th><th>Target student</th><th>Peer</th><th>Difference (target − peer)</th></tr></thead><tbody>
+    ${pairs.map(({t, p}) => { const a = Calc.summarize(sess, t), b = Calc.summarize(sess, p); const N = peerEveryOf(sess, p);
+      return `<tr><td><b>${esc(t.name)}</b></td><td>${esc(METHODS[t.method].label)}${INTERVAL_METHODS.includes(t.method) ? `<br><span class="small sub">Peer: ${esc(ordinalEvery(N))}</span>` : ''}</td><td class="mono">${esc(metricText(a, t))}</td><td class="mono">${esc(metricText(b, p))}</td><td class="mono">${esc(metricDiff(a, b, t))}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="small sub">Peer data describe typical behavior in the same setting for context. When the peer is scored on a schedule, observers often watch a different typical peer each time (a composite peer). Interpretation is up to the observer.</p></section>`;
+}
+function peerValues(t, series){
+  const tw = S.targets.find(x => x.peerOf === t.id); if(!tw) return null;
+  const v = series.map(pt => { if(!pt.s.targetIds.includes(tw.id)) return null; const r = Calc.summarize(pt.s, tw); return (r.den > 0 || tw.method === 'abc') ? r.value : null; });
+  return v.some(x => x != null) ? {tw, v} : null;
+}
 const sortedSessions = list => list.slice().sort((a,b) => (b.date + b.startTime).localeCompare(a.date + a.startTime));
 
 function nameLikeWarning(code){
@@ -766,7 +859,7 @@ const ICON = {
 function viewHome(){
   const ls = liveSession();
   const ended = sortedSessions(S.sessions.filter(s => s.status === 'ended'));
-  const nT = S.targets.filter(t => !t.archived).length;
+  const nT = S.targets.filter(t => !t.archived && !t.peerOf).length;
   const last = ended[0];
   return `
   <section class="stack" style="gap:6px"><h1>Welcome to Sightline</h1>
@@ -781,7 +874,7 @@ function viewHome(){
   </nav>
   ${ended.length ? `<section class="panel" aria-labelledby="recentSesT"><header><h2 id="recentSesT">Recent sessions</h2><a href="#sessions" class="small">See all</a></header>
     <div class="list">${ended.slice(0, 3).map(s => `<button class="lrow" data-act="openSession" data-id="${s.id}" id="hs_${s.id}"><span class="t mono">${esc(stuById(s.studentId)?.code)}</span><span>${fmtDate(s.date)}</span><span class="sub small">${esc(s.setting)}</span><span class="spacer"></span><span class="mono small">${fmtClock(Calc.observedMs(s))}</span></button>`).join('')}</div></section>` : ''}
-  <p class="small sub">Prototype for fictional data only. Data stays in this browser on this device.</p>`;
+  <p class="small sub">Data stays in this browser on this device.</p>`;
 }
 function viewObserve(){
   const ls = liveSession();
@@ -829,6 +922,10 @@ function viewObserve(){
         <label class="f">Interval length (s) <span class="hint">Interval methods only</span><input type="number" id="qInt" name="intervalSec" min="3" max="600" value="${tpl.intervalSec || 10}"></label>
         <label class="f">Observer<input type="text" id="qObs" name="observer" list="dlObservers" value="${esc(lastObs)}" placeholder="Initials and role"></label>
       </div>
+      <fieldset><legend>Peer comparison (optional)</legend>
+        <label class="check"><input type="checkbox" name="peer" id="qPeer"><span>Also record a comparison peer with the same definition and method</span></label>
+        <label class="f">Score the peer <span class="hint">Interval methods only. Every 5th interval is a common composite-peer schedule.</span><select id="qPeerEvery" name="peerEvery">${PEER_EVERY.map(([n, l]) => `<option value="${n}">${l}</option>`).join('')}</select></label>
+      </fieldset>
       <button class="primary big" type="submit" id="qStart">Start observing</button>
     </form>
 
@@ -838,9 +935,11 @@ function viewObserve(){
       <label class="f">Student
         <select id="pStudent" name="studentId" data-act-change="planStudent">${studs.map(s => `<option value="${s.id}" ${s.id === plannedStu ? 'selected' : ''}>${esc(s.code)}${s.demo ? ' (sample)' : ''}</option>`).join('')}</select></label>
       <fieldset><legend>Targets to record</legend>
-        ${pts.length ? pts.map(t => `<label class="check"><input type="checkbox" name="targets" value="${t.id}" id="pt_${t.id}" checked><span><b>${esc(t.name)}</b> <span class="chip">${METHODS[t.method].label}</span></span></label>`).join('')
+        ${pts.length ? pts.map(t => `<div class="trow"><label class="check"><input type="checkbox" name="targets" value="${t.id}" id="pt_${t.id}" checked><span><b>${esc(t.name)}</b> <span class="chip">${METHODS[t.method].label}</span></span></label>
+          <label class="check peerchk"><input type="checkbox" name="peers" value="${t.id}" id="pp_${t.id}"><span>Peer comparison</span></label></div>`).join('')
           : `<p class="sub">This student has no targets yet. <button type="button" class="ghost sm" data-act="goStudents">Add targets</button></p>`}
       </fieldset>
+      ${pts.length ? `<label class="f">Score peers <span class="hint">For interval methods with Peer comparison checked. Every 5th interval is a common composite-peer schedule.</span><select id="pPeerEvery" name="peerEvery">${PEER_EVERY.map(([n, l]) => `<option value="${n}">${l}</option>`).join('')}</select></label>` : ''}
       <div class="fields">
         <label class="f">Setting<input type="text" id="pSetting" name="setting" list="dlSettings" required placeholder="e.g. Reading – small group" value="${esc(S.ui.planSetting || '')}"></label>
         <label class="f">Observer<input type="text" id="pObs" name="observer" list="dlObservers" value="${esc(lastObs)}" placeholder="Initials and role"></label>
@@ -855,10 +954,14 @@ function viewObserve(){
 /* =====================================================================
    Session lifecycle
    ===================================================================== */
-function newSession({studentId, setting, observer, date, startTime, targetIds}){
+function newSession({studentId, setting, observer, date, startTime, targetIds, peers = [], peerEvery = 1}){
   const now = Date.now();
+  const ids = [], pe = {};
+  for(const id of targetIds){ ids.push(id); const t = tgById(id);
+    if(t && peers.includes(id)){ const tw = peerTwin(t); ids.push(tw.id); if(INTERVAL_METHODS.includes(t.method) && peerEvery > 1) pe[tw.id] = peerEvery; } }
+  targetIds = ids;
   const sess = {id:uid('ses'), studentId, setting, observer, date, startTime, targetIds, status:'active', segments:[{s:now, e:null}], events:[], notes:'',
-    running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], markers:[], createdAt:now, endedAt:null};
+    running:{}, latencyPending:{}, taRun:{}, abcDraft:{}, metaHistory:[], markers:[], peerEvery:pe, createdAt:now, endedAt:null};
   S.sessions.push(sess); S.ui.lastObserver = observer || S.ui.lastObserver; save();
   lastCompleted = {}; undoStack = [];
   keepAwake(true); cue(); // cue() here unlocks audio on iOS via user gesture
@@ -948,9 +1051,14 @@ function viewLive(){
   const sess = liveSession();
   if(!sess) return `<div class="empty"><p>No observation is running.</p><p><button class="primary" data-act="goObserve">Start an observation</button></p></div>`;
   const st = stuById(sess.studentId);
-  const tgs = sess.targetIds.map(tgById).filter(Boolean);
   const paused = sess.status === 'paused';
-  const recent = sess.events.slice().sort((a,b) => b.wall - a.wall).slice(0, 6);
+  const recent = sess.events.slice().sort((a,b) => b.wall - a.wall).slice(0, 8);
+  liveKeyMap = {}; liveKeyIdx = 0;
+  const q = liveQueue(sess); activePrompt = q[0] || null;
+  const cards = sess.targetIds.map(tgById).filter(t => t && !t.peerOf).map(t => {
+    const p = peerIn(sess, t);
+    return INTERVAL_METHODS.includes(t.method) ? intervalCard(sess, t, p) : methodCard(sess, t, p);
+  });
   return `
   <h1 class="srOnly">Live observation</h1>
   <section class="livehead" aria-label="Session controls">
@@ -965,40 +1073,207 @@ function viewLive(){
       <button class="danger" id="btnEnd" data-act="end">End</button>
     </div>
   </section>
-  ${paused ? `<div class="notice"><div>Observation is paused. Paused time is excluded from all timers, rates, and intervals. You can still fix entries.</div></div>` : ''}
-  ${contextBar(sess)}
-  <div class="cards">${tgs.map((t, i) => targetCard(sess, t, i)).join('')}</div>
-  <div class="grid2">
-    <section class="panel" aria-labelledby="recentT"><header><h2 id="recentT">Recent entries</h2></header>
-      ${recent.length ? `<div class="tablewrap"><table><thead><tr><th>Time</th><th>Target</th><th>Entry</th></tr></thead><tbody>
-      ${recent.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td>${esc(entryName(sess, e))}</td><td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">undone</span>' : ''}</td></tr>`).join('')}
-      </tbody></table></div>` : `<p class="sub">Entries appear here as you record.</p>`}
-    </section>
-    <section class="panel" aria-labelledby="notesT"><header><h2 id="notesT">Session notes</h2></header>
-      <label class="f">Notes <span class="hint">Context only. No names or identifying details.</span><textarea id="liveNotes" data-input="sessNotes">${esc(sess.notes)}</textarea></label>
-      <p class="small sub">Keyboard: number keys run each card's main action (shown on the card). <kbd>P</kbd> pauses or resumes, <kbd>U</kbd> undoes the last entry.</p>
-    </section>
-  </div>`;
+  ${paused ? `<div class="notice"><div>Paused. Paused time is left out of all timers, rates, and intervals.</div></div>` : ''}
+  ${notesBar(sess)}
+  <div class="cards">${cards.join('')}</div>
+  <p class="keyhelp small sub">Keys: <kbd>1</kbd> yes · <kbd>2</kbd> no · <kbd>3</kbd> skip answer the highlighted interval question. Letters shown on buttons press them. <kbd>N</kbd> note (<kbd>Esc</kbd> to leave the note box) · <kbd>P</kbd> pause · <kbd>U</kbd> undo.</p>
+  <details class="panel recent"><summary><b>Recent entries</b> <span class="sub small">(${sess.events.filter(e => !e.voided).length})</span></summary>
+    ${recent.length ? `<div class="tablewrap"><table><thead><tr><th>Time</th><th>What</th><th>Entry</th></tr></thead><tbody>
+    ${recent.map(e => `<tr class="${e.voided ? 'voided' : ''}"><td class="n">${fmtClock(e.t)}</td><td>${esc(entryName(sess, e))}</td><td>${esc(describeEvent(e))}${e.voided ? ' <span class="chip">undone</span>' : ''}</td></tr>`).join('')}
+    </tbody></table></div>` : `<p class="sub">Entries appear here as you record.</p>`}
+  </details>`;
 }
+
+/* ---------- live helpers ---------- */
+const CARD_KEYS = ['A','S','D','F','G','H','J','K','L','Q','W','E','R','T'];
+let liveKeyMap = {}, liveKeyIdx = 0, activePrompt = null, noteDraft = '';
+const openRecords = new Set();
+function keyFor(elId){ if(liveKeyIdx >= CARD_KEYS.length) return ''; const k = CARD_KEYS[liveKeyIdx++]; liveKeyMap[k] = elId; return ` <kbd title="Keyboard shortcut">${k}</kbd>`; }
+function pendingSlots(sess, t, p, k){
+  return [t, p].filter(Boolean).filter(tg => { if(!isScheduled(sess, tg, k)) return false; const d = Calc.intervalData(sess, tg.id)[k]; return !d || (!d.value && !d.skipped); });
+}
+function groupPending(sess, t, p){
+  const L = (t.config.intervalSec || 10) * 1000; const done = Math.floor(Calc.observedMs(sess) / L);
+  const out = [];
+  for(let k = 0; k < done; k++){ const sl = pendingSlots(sess, t, p, k); if(sl.length) out.push({k, slots:sl}); }
+  return out;
+}
+function liveQueue(sess){
+  const out = [];
+  sess.targetIds.map(tgById).filter(t => t && !t.peerOf && INTERVAL_METHODS.includes(t.method)).forEach((t, order) => {
+    const p = peerIn(sess, t); const pend = groupPending(sess, t, p);
+    if(pend.length){ const L = (t.config.intervalSec || 10) * 1000; out.push({t, p, k:pend[0].k, slots:pend[0].slots, endT:(pend[0].k + 1) * L, order, more:pend.length - 1}); }
+  });
+  return out.sort((a, b) => a.endT - b.endT || a.order - b.order);
+}
+function skipInterval(sess, t, k){
+  const ev = findIntervalEvent(sess, t.id, k);
+  if(!ev) record(sess, t.id, 'interval', {index:k, value:null, skipped:true});
+  else { ev.data.skipped = true; save(); }
+}
+function answerActive(v){
+  const s = liveSession(); if(!s) return;
+  const q = liveQueue(s)[0]; if(!q){ toast('No interval is waiting to be scored'); return; }
+  const tg = q.slots[0];
+  if(v === 'skip') skipInterval(s, tg, q.k); else scoreInterval(s, tg, q.k, v);
+  const who = q.p ? (tg === q.t ? 'Student' : 'Peer') + ' ' : '';
+  render(); toast(`${q.t.name}, interval ${q.k + 1}: ${who}${v === 'skip' ? 'skipped' : v === 'yes' ? 'yes' : 'no'}`);
+}
+function valueWord(v){ return v === 'yes' ? 'Yes' : v === 'no' ? 'No' : 'Skipped'; }
+
+function intervalCard(sess, t, p){
+  const r = Calc.summarize(sess, t), rp = p ? Calc.summarize(sess, p) : null;
+  const w = INT_WORDS[t.method]; const L = r.L; const obs = Calc.observedMs(sess); const cur = Math.floor(obs / L);
+  const pend = groupPending(sess, t, p); const first = pend[0];
+  const isActive = !!(first && activePrompt && activePrompt.t.id === t.id && activePrompt.k === first.k);
+  const N = p ? peerEveryOf(sess, p) : 1;
+  const nextPeer = p && N > 1 ? (isScheduled(sess, p, cur) ? cur : cur + ((N - ((cur + 1) % N)) % N)) : null;
+  // during-interval buttons (partial: occurred now; whole: stopped)
+  const curBtn = (tg, who) => {
+    if(!isScheduled(sess, tg, cur)) return '';
+    const v = Calc.intervalMap(sess, tg.id)[cur]; const id = `b_${tg.id}_occ`;
+    if(t.method === 'partial') return v === 'yes'
+      ? `<button class="on" id="${id}" data-act="intCur" data-t="${tg.id}" data-v="" aria-pressed="true">${who}occurred ✓${keyFor(id)}</button>`
+      : `<button class="primary" id="${id}" data-act="intCur" data-t="${tg.id}" data-v="yes" aria-pressed="false">${who}occurred${keyFor(id)}</button>`;
+    if(t.method === 'whole') return v === 'no'
+      ? `<button class="sm" id="${id}" data-act="intCur" data-t="${tg.id}" data-v="" aria-pressed="true">${who}stopped ✓${keyFor(id)}</button>`
+      : `<button class="sm" id="${id}" data-act="intCur" data-t="${tg.id}" data-v="no" aria-pressed="false">${who}stopped${keyFor(id)}</button>`;
+    return '';
+  };
+  const curRow = t.method === 'mts' ? '' : `<div class="currow">${curBtn(t, p ? 'Student ' : 'Behavior ')}${p ? curBtn(p, 'Peer ') : ''}</div>`;
+  let prompt = '';
+  if(first){
+    const k = first.k;
+    const answered = [t, p].filter(Boolean).filter(tg => isScheduled(sess, tg, k) && !first.slots.includes(tg)).map(tg => { const d = Calc.intervalData(sess, tg.id)[k]; return `<span class="answered">${tg === t ? 'Student' : 'Peer'}: ${valueWord(d?.value)}</span>`; }).join('');
+    prompt = `<div class="prompt ${isActive ? 'active' : ''}" role="group" aria-label="Score interval ${k+1}">
+      <p>Interval ${k+1} ended. ${w.q}</p>${answered ? `<div class="row small">${answered}</div>` : ''}
+      ${first.slots.map((tg, j) => { const keyed = isActive && j === 0; const who = p ? (tg === t ? 'Student' : 'Peer') : '';
+        return `<div class="slot ${keyed ? 'keyslot' : ''}">${who ? `<span class="who">${who}</span>` : ''}
+          <button class="yes" id="b_${tg.id}_p${k}y" data-act="intScore" data-t="${tg.id}" data-k="${k}" data-v="yes">Yes${keyed ? ' <kbd>1</kbd>' : ''}</button>
+          <button class="no" id="b_${tg.id}_p${k}n" data-act="intScore" data-t="${tg.id}" data-k="${k}" data-v="no">No${keyed ? ' <kbd>2</kbd>' : ''}</button>
+          <button class="ghost" id="b_${tg.id}_p${k}s" data-act="intSkip" data-t="${tg.id}" data-k="${k}">Skip${keyed ? ' <kbd>3</kbd>' : ''}</button></div>`; }).join('')}
+      ${pend.length > 1 ? `<p class="small sub">${pend.length - 1} more waiting after this one.</p>` : ''}
+    </div>`;
+  }
+  const recId = 'rec_' + t.id;
+  const val = (rr) => rr.scored ? `${fmtNum(rr.value, 0)}%` : '—';
+  return `<article class="tcard ${p ? 'paired' : ''} ${isActive ? 'hasactive' : ''}" aria-label="${esc(t.name)}, ${METHODS[t.method].label}${p ? ', with peer comparison' : ''}">
+    <header><div class="stack" style="gap:3px"><h3>${esc(t.name)}</h3><span class="row" style="gap:6px"><span class="chip acc">${METHODS[t.method].label} · ${L/1000} s</span>${p ? `<span class="chip peer">+ Peer${N > 1 ? `, ${esc(ordinalEvery(N).replace(' interval', ''))}` : ''}</span>` : ''}</span></div>
+      <div class="hv">${p ? `<span><span class="sub small">Student</span> <b class="mono">${val(r)}</b></span><span><span class="sub small">Peer</span> <b class="mono">${val(rp)}</b></span>` : `<b class="mono">${val(r)}</b><span class="sub small">of scored</span>`}</div></header>
+    <div class="stack" style="gap:4px"><div class="row small"><span>Interval <b class="mono" data-intn="${t.id}">${cur+1}</b>${nextPeer != null ? ` <span class="sub">· peer ${nextPeer === cur ? '<b>now</b>' : `at ${nextPeer + 1}`}</span>` : ''}</span><span class="spacer"></span><span class="mono" data-intleft="${t.id}">${fmtClock(L - (obs % L))}</span></div>
+      <div class="prog" aria-hidden="true"><i data-intbar="${t.id}" style="width:${(obs % L)/L*100}%"></i></div></div>
+    ${curRow}
+    ${prompt}
+    <details class="rec" data-rec="${recId}" ${openRecords.has(recId) ? 'open' : ''}><summary>Interval record · ${r.scored} scored${p ? ` · peer ${rp.scored}` : ''}</summary>
+      ${p ? '<p class="small sub">Student</p>' : ''}${stripHTML(r.cells, t, true, sess.status !== 'ended' ? cur : null, r.notes)}
+      ${p ? `<p class="small sub">Peer</p>${stripHTML(rp.cells, p, true, sess.status !== 'ended' ? cur : null, rp.notes)}` : ''}
+      <p class="small sub">Select a cell to change a score or add a note to that interval.</p></details>
+    <details class="def"><summary>Definition</summary><p>${esc(t.definition)}</p></details>
+  </article>`;
+}
+
+function methodBody(sess, t, compact){
+  const r = Calc.summarize(sess, t); const id = t.id; const running = !!sess.running?.[id];
+  switch(t.method){
+    case 'frequency':
+      return `<button class="big count primary" id="b_${id}_count" data-act="count" data-t="${id}" aria-label="Add one. Current count ${r.count}"><span>+1${keyFor('b_' + id + '_count')}</span><span class="n">${r.count}</span></button>
+        <div class="row small"><span class="sub"><span class="mono" data-rate="${id}">${r.value == null ? '—' : fmtNum(r.value, 2)}</span> per min</span><span class="spacer"></span><button class="ghost sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.count ? '' : 'disabled'}>Undo</button></div>`;
+    case 'duration':
+      return `<button class="big ${running ? 'on' : 'primary'}" id="b_${id}_dur" data-act="durToggle" data-t="${id}" aria-pressed="${running}">${running ? `Stop · <span class="mono" data-run="${id}">${fmtClock(Calc.observedMs(sess) - sess.running[id].t)}</span>` : 'Start timer'}${keyFor('b_' + id + '_dur')}</button>
+        <div class="row small"><span class="sub">${r.episodes} episode${r.episodes === 1 ? '' : 's'} · <span class="mono" data-durtotal="${id}">${fmtClock(r.total)}</span> total</span><span class="spacer"></span><button class="ghost sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.episodes - (running ? 1 : 0) > 0 ? '' : 'disabled'}>Undo</button></div>`;
+    case 'latency': {
+      const pnd = sess.latencyPending?.[id]; const to = t.config.timeoutSec || 0;
+      const main = pnd ? `<div class="prompt" role="group" aria-label="Waiting for response"><p>Waiting · <span class="mono" data-lat="${id}">${fmtClock(Calc.observedMs(sess) - pnd.t)}</span>${to ? ` <span class="small sub">(times out at ${to} s)</span>` : ''}</p>
+          <div class="btns2"><button class="yes" id="b_${id}_resp" data-act="latResp" data-t="${id}">Response${keyFor('b_' + id + '_resp')}</button><button class="no" id="b_${id}_nr" data-act="latNR" data-t="${id}">No response</button></div></div>`
+        : `<button class="big primary" id="b_${id}_trig" data-act="latTrig" data-t="${id}">Instruction given${keyFor('b_' + id + '_trig')}</button>`;
+      return main + `<div class="row small"><span class="sub">${r.trials} trial${r.trials === 1 ? '' : 's'} · mean ${r.value == null ? '—' : fmtNum(r.value, 1) + ' s'}</span><span class="spacer"></span><button class="ghost sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.trials ? '' : 'disabled'}>Undo</button></div>`;
+    }
+    case 'percent':
+      return `<div class="${t.config.allowPrompted === false || compact ? 'btns2' : 'btns3'}">
+          <button class="yes" id="b_${id}_c" data-act="trial" data-t="${id}" data-v="correct">Correct</button>
+          ${t.config.allowPrompted === false || compact ? '' : `<button id="b_${id}_p" data-act="trial" data-t="${id}" data-v="prompted">Prompted</button>`}
+          <button class="no" id="b_${id}_i" data-act="trial" data-t="${id}" data-v="incorrect">Incorrect</button></div>
+        ${compact && t.config.allowPrompted !== false ? `<button class="sm" id="b_${id}_p" data-act="trial" data-t="${id}" data-v="prompted">Prompted</button>` : ''}
+        <div class="row small"><span class="sub mono">${r.c}/${r.n} correct${r.p ? ` · ${r.p} prompted` : ''}</span><span class="spacer"></span><button class="ghost sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.n ? '' : 'disabled'}>Undo</button></div>`;
+    case 'task': {
+      const run = sess.taRun?.[id]; const steps = t.config.steps || [];
+      return (run ? `<div class="tasteps">${steps.map((s, k) => `<div class="tastep"><span><b>${k+1}.</b> ${esc(s)}</span><div class="levels" role="group" aria-label="Prompt level for step ${k+1}">
+          ${LEVELS.map(l => `<button type="button" id="b_${id}_s${k}_${l.k}" data-act="taScore" data-t="${id}" data-k="${k}" data-v="${l.k}" aria-pressed="${run.scores[k] === l.k}" title="${l.label}" aria-label="${l.label}">${l.k}</button>`).join('')}</div></div>`).join('')}</div>
+          <div class="btns2"><button class="primary" id="b_${id}_fin" data-act="taFinish" data-t="${id}">Finish run</button><button class="danger" id="b_${id}_dis" data-act="taDiscard" data-t="${id}">Discard</button></div>
+          <p class="small sub">${LEVELS.map(l => `${l.k} = ${l.label}`).join(' · ')}</p>`
+        : `<button class="big primary" id="b_${id}_start" data-act="taStart" data-t="${id}">Start a run (${steps.length} steps)</button>`)
+        + `<div class="row small"><span class="sub">${r.runs} run${r.runs === 1 ? '' : 's'} · ${r.indep}/${r.scored} independent</span></div>`;
+    }
+    case 'abc': {
+      const d = sess.abcDraft?.[id];
+      const ants = t.config.antecedents?.length ? t.config.antecedents : DEFAULT_ANTECEDENTS;
+      const cons = t.config.consequences?.length ? t.config.consequences : DEFAULT_CONSEQUENCES;
+      return d ? `<div class="stack">
+          <p class="small"><b>Marked at ${fmtClock(d.t)}</b></p>
+          <label class="f">Antecedent (right before)<input type="text" id="abc_${id}_antecedent" data-abc="${id}" data-field="antecedent" value="${esc(d.antecedent)}"></label>
+          <div class="chips">${ants.map((a, k) => `<button type="button" id="abc_${id}_ac${k}" data-act="abcChip" data-t="${id}" data-field="antecedent" data-v="${esc(a)}" aria-pressed="${d.antecedent === a}">${esc(a)}</button>`).join('')}</div>
+          <label class="f">Behavior (what the student did)<input type="text" id="abc_${id}_behavior" data-abc="${id}" data-field="behavior" value="${esc(d.behavior)}"></label>
+          <label class="f">Consequence (right after)<input type="text" id="abc_${id}_consequence" data-abc="${id}" data-field="consequence" value="${esc(d.consequence)}"></label>
+          <div class="chips">${cons.map((a, k) => `<button type="button" id="abc_${id}_cc${k}" data-act="abcChip" data-t="${id}" data-field="consequence" data-v="${esc(a)}" aria-pressed="${d.consequence === a}">${esc(a)}</button>`).join('')}</div>
+          <details><summary class="small">Setting and notes</summary>
+            <label class="f">Setting / context<input type="text" id="abc_${id}_context" data-abc="${id}" data-field="context" value="${esc(d.context)}"></label>
+            <label class="f">Notes<input type="text" id="abc_${id}_notes" data-abc="${id}" data-field="notes" value="${esc(d.notes)}"></label></details>
+          <div class="btns2"><button class="primary" id="b_${id}_save" data-act="abcSave" data-t="${id}">Save entry</button><button id="b_${id}_cancel" data-act="abcCancel" data-t="${id}">Discard</button></div></div>`
+        : `<button class="big primary" id="b_${id}_mark" data-act="abcMark" data-t="${id}">Mark behavior now${keyFor('b_' + id + '_mark')}</button><div class="row small"><span class="sub">${r.count} entr${r.count === 1 ? 'y' : 'ies'}</span></div>`;
+    }
+  }
+  return '';
+}
+function methodCard(sess, t, p){
+  const r = Calc.summarize(sess, t); const running = !!sess.running?.[t.id] || (p && !!sess.running?.[p.id]);
+  const bodyT = methodBody(sess, t, !!p);
+  const bodyP = p ? methodBody(sess, p, true) : '';
+  return `<article class="tcard ${p ? 'paired' : ''} ${running || sess.latencyPending?.[t.id] ? 'active' : ''}" aria-label="${esc(t.name)}, ${METHODS[t.method].label}${p ? ', with peer comparison' : ''}">
+    <header><div class="stack" style="gap:3px"><h3>${esc(t.name)}</h3><span class="row" style="gap:6px"><span class="chip acc">${METHODS[t.method].label}</span>${p ? '<span class="chip peer">+ Peer</span>' : ''}</span></div>
+      ${p ? '' : `<div class="hv"><b class="mono">${esc(r.big)}</b><span class="sub small">${esc(r.bigLabel)}</span></div>`}</header>
+    ${p ? `<div class="pairgrid"><div class="col"><span class="who">Student</span>${bodyT}</div><div class="col"><span class="who">Peer</span>${bodyP}</div></div>` : bodyT}
+    <details class="def"><summary>Definition</summary><p>${esc(t.definition)}</p></details>
+  </article>`;
+}
+
+/* ---------- notes, activities, context ---------- */
+function notesBar(sess){
+  const notes = Calc.events(sess, '_note', 'note').sort((a,b) => b.t - a.t);
+  const segs = activitySegments(sess); const curAct = segs[segs.length - 1];
+  const recentActs = (S.ui.activityLabels || []).filter(l => l.toLowerCase() !== curAct.label.toLowerCase()).slice(0, 4);
+  const ms = visibleMarkers(sess);
+  return `<section class="notebar" aria-label="Notes, activity, and context">
+    <form class="noteform" data-form="liveNote" autocomplete="off">
+      <label class="srOnly" for="noteInput">Note</label>
+      <input type="text" id="noteInput" name="text" data-input="noteDraft" value="${esc(noteDraft)}" maxlength="300" placeholder="Type a note, press Enter to save (N to jump here, Esc to leave)">
+      <button type="submit" class="primary" id="btnAddNote">Add note</button>
+      <button type="button" id="btnActNote" data-act="noteActivity" title="Save the text as a new activity, like Independent math work">Activity change</button>
+    </form>
+    <div class="row barrow"><span class="small"><span class="sub">Activity:</span> <b>${esc(curAct.label)}</b> <span class="sub mono">since ${fmtClock(curAct.start)}</span></span>
+      ${recentActs.map((l, i) => `<button type="button" class="pill" id="act_${i}" data-act="activityChip" data-v="${esc(l)}" title="Switch activity">→ ${esc(l)}</button>`).join('')}</div>
+    <div class="row barrow">${ms.map(m => { const n = Calc.events(sess, m.id, 'marker').length; return `<button class="pill ctx" id="mk_${m.id}" data-act="mark" data-m="${m.id}" aria-label="Record ${esc(m.label)}. Count ${n}">${esc(m.label)} <b class="mono">${n}</b></button>`; }).join('')}
+      <button class="ghost sm" id="btnAddMarker" data-act="addMarker">+ Context button</button>${ms.length ? `<button class="ghost sm" id="btnManageMarkers" data-act="manageMarkers">Edit</button>` : ''}</div>
+    ${notes.length ? `<ul class="notelog" aria-label="Latest notes">${notes.slice(0, 3).map(e => `<li><span class="mono sub">${fmtClock(e.t)}</span> ${e.data.kind === 'activity' ? '<b>Activity:</b> ' : ''}${esc(e.data.text)}</li>`).join('')}</ul>` : ''}
+  </section>`;
+}
+function addLiveNote(kind, text){
+  const s = liveSession(); if(!s) return;
+  text = String(text || '').trim().replace(/\s+/g, ' ');
+  if(!text){ toast(kind === 'activity' ? 'Type the new activity first, for example "Independent math work"' : 'Type a note first'); $('#noteInput')?.focus(); return; }
+  record(s, '_note', 'note', {text, kind});
+  if(kind === 'activity') S.ui.activityLabels = [text, ...(S.ui.activityLabels || []).filter(l => l.toLowerCase() !== text.toLowerCase())].slice(0, 8);
+  noteDraft = ''; save(); render(); $('#noteInput')?.blur();
+  toast(kind === 'activity' ? `Activity: ${text}` : 'Note added');
+}
+
 const CONTEXT_PRESETS = ['Teacher prompt','Peer interaction','Teacher praise','Redirection','Transition','Peer prompt'];
 function visibleMarkers(sess){ return (sess.markers || []).filter(m => !m.hidden); }
 function markerName(sess, id){ const m = (sess.markers || []).find(x => x.id === id); return m ? m.label : null; }
-function entryName(sess, e){ const t = tgById(e.targetId); if(t) return t.name; if(e.type === 'marker') return 'Context: ' + (markerName(sess, e.targetId) || e.data.label || ''); return ''; }
+function entryName(sess, e){ const t = tgById(e.targetId); if(t) return t.name; if(e.type === 'note') return e.data.kind === 'activity' ? 'Activity change' : 'Note'; if(e.type === 'marker') return 'Context: ' + (markerName(sess, e.targetId) || e.data.label || ''); return ''; }
 function markerSummary(sess){
   const obs = Calc.observedMs(sess); const min = obs / 60000;
   return (sess.markers || []).map(m => { const ev = Calc.events(sess, m.id, 'marker'); return {m, n:ev.length, rate: min > 0 ? ev.length / min : null, times: ev.map(e => e.t).sort((a,b) => a-b)}; })
     .filter(x => x.n > 0 || !x.m.hidden);
-}
-function contextBar(sess){
-  const ms = visibleMarkers(sess);
-  return `<section class="ctxbar" aria-labelledby="ctxT">
-    <div class="row" style="gap:8px"><h2 id="ctxT" class="eyebrow" style="font-size:.78rem">Context buttons</h2><span class="small sub">Optional. Add buttons for events you want to track, like teacher prompts or peer interactions.</span></div>
-    <div class="ctxbtns">
-      ${ms.map(m => { const n = Calc.events(sess, m.id, 'marker').length; return `<button class="ctxbtn" id="mk_${m.id}" data-act="mark" data-m="${m.id}" aria-label="Record ${esc(m.label)}. Count ${n}"><span>${esc(m.label)}</span><span class="n">${n}</span></button>`; }).join('')}
-      <button class="ghost" id="btnAddMarker" data-act="addMarker">+ Add context button</button>
-    </div>
-    ${ms.length ? `<div class="row" style="gap:8px"><button class="sm" id="btnUndoMarker" data-act="undoMarker" ${sess.events.some(e => e.type === 'marker' && !e.voided) ? '' : 'disabled'}>Undo last context tap</button><button class="sm ghost" id="btnManageMarkers" data-act="manageMarkers">Remove buttons</button></div>` : ''}
-  </section>`;
 }
 function addMarkerDialog(sess){
   const used = new Set(visibleMarkers(sess).map(m => m.label.toLowerCase()));
@@ -1030,112 +1305,23 @@ function manageMarkersDialog(sess){
     onOpen: d => d.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { const m = sess.markers.find(x => x.id === b.dataset.rm); m.hidden = true; save(); render(); b.closest('.lrow').remove(); toast(`Removed "${m.label}"`); }))
   });
 }
+function notesPanelHTML(s){
+  const ns = Calc.events(s, '_note', 'note').sort((a,b) => a.t - b.t); if(!ns.length) return '';
+  const it = s.targetIds.map(tgById).find(t => t && INTERVAL_METHODS.includes(t.method)); const L = it ? (it.config.intervalSec || 10) * 1000 : null;
+  return `<section class="panel" aria-labelledby="notesLogT"><header><h2 id="notesLogT">Notes and activities</h2><span class="small sub">Edit or void entries in the timeline below</span></header>
+    <div class="tablewrap"><table><thead><tr><th class="n">Session time</th>${L ? '<th class="n">Interval</th>' : ''}<th>Type</th><th>Note</th></tr></thead><tbody>
+    ${ns.map(e => `<tr><td class="n">${fmtClock(e.t)}</td>${L ? `<td class="n">${Math.floor(e.t / L) + 1}</td>` : ''}<td>${e.data.kind === 'activity' ? '<b>Activity change</b>' : 'Note'}</td><td>${esc(e.data.text)}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
 function contextSummaryHTML(sess){
   const rows = markerSummary(sess).filter(x => x.n > 0); if(!rows.length) return '';
   return `<section class="panel" aria-labelledby="ctxSumT"><header><h2 id="ctxSumT">Context events</h2><span class="small sub">Observer-added buttons. Not tied to a target behavior.</span></header>
     <div class="tablewrap"><table><thead><tr><th>Event</th><th class="n">Count</th><th class="n">Per minute</th><th>Times (session time)</th></tr></thead><tbody>
     ${rows.map(x => `<tr><td>${esc(x.m.label)}</td><td class="n">${x.n}</td><td class="n">${fmtNum(x.rate, 2)}</td><td class="mono small">${x.times.map(fmtClock).join(', ')}</td></tr>`).join('')}</tbody></table></div></section>`;
 }
-function keyChip(i){ return i < 9 ? `<kbd title="Keyboard shortcut">${i+1}</kbd>` : ''; }
-function targetCard(sess, t, i){
-  const r = Calc.summarize(sess, t);
-  const m = METHODS[t.method];
-  const running = !!sess.running?.[t.id];
-  const head = `<header><div class="stack" style="gap:4px"><h3>${esc(t.name)}</h3><span class="row" style="gap:6px"><span class="chip acc">${m.label}</span>${['frequency','duration','latency','partial'].includes(t.method) ? keyChip(i) : ''}</span></div>
-    <div style="text-align:right"><div class="mono" style="font-size:1.35rem;font-weight:600">${esc(r.big)}</div><div class="small sub">${esc(r.bigLabel)}</div></div></header>
-    <details><summary>Definition</summary><p>${esc(t.definition)}</p></details>`;
-  let body = '';
-  const id = t.id;
-  switch(t.method){
-    case 'frequency':
-      body = `<button class="big count primary" id="b_${id}_count" data-act="count" data-t="${id}" aria-label="Add one ${esc(t.name)}. Current count ${r.count}"><span>+1 ${esc(t.name)}</span><span class="n">${r.count}</span></button>
-        <div class="row"><button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.count ? '' : 'disabled'}>Undo last tap</button><span class="spacer"></span><span class="stat">Rate <b data-rate="${id}">${r.value == null ? '—' : fmtNum(r.value, 2)}</b> per min</span></div>`;
-      break;
-    case 'duration':
-      body = `<button class="big ${running ? 'on' : 'primary'}" id="b_${id}_dur" data-act="durToggle" data-t="${id}" aria-pressed="${running}">${running ? `Stop timer · <span class="mono" data-run="${id}">${fmtClock(Calc.observedMs(sess) - sess.running[id].t)}</span>` : 'Start timer'}</button>
-        <div class="stat"><span>Episodes <b>${r.episodes}</b></span><span>Total <b data-durtotal="${id}">${fmtClock(r.total)}</b></span><span>Mean <b>${r.mean == null ? '—' : fmtClock(r.mean)}</b></span></div>
-        <button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.episodes - (running ? 1 : 0) > 0 ? '' : 'disabled'}>Undo last episode</button>`;
-      break;
-    case 'latency': {
-      const p = sess.latencyPending?.[id];
-      const to = t.config.timeoutSec || 0;
-      body = p ? `<div class="prompt" role="group" aria-label="Waiting for response"><p>Instruction given · <span class="mono" data-lat="${id}">${fmtClock(Calc.observedMs(sess) - p.t)}</span>${to ? ` <span class="small">(times out at ${to} s)</span>` : ''}</p>
-          <div class="btns2"><button class="yes" id="b_${id}_resp" data-act="latResp" data-t="${id}">Response</button><button class="no" id="b_${id}_nr" data-act="latNR" data-t="${id}">No response</button></div></div>`
-        : `<button class="big primary" id="b_${id}_trig" data-act="latTrig" data-t="${id}">Mark instruction given</button>`;
-      body += `<div class="stat"><span>Trials <b>${r.trials}</b></span><span>Responded <b>${r.responded}</b></span><span>No response <b>${r.noResp}</b></span><span>Timed out <b>${r.timeouts}</b></span></div>
-        <div class="row"><span class="small sub">Last: ${(() => { const last = Calc.events(sess, id, 'latency').slice(-1)[0]; return last ? esc(describeEvent(last)) : '—'; })()}</span><span class="spacer"></span><button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.trials ? '' : 'disabled'}>Undo last trial</button></div>`;
-      break;
-    }
-    case 'partial': case 'whole': case 'mts': {
-      const w = INT_WORDS[t.method];
-      const L = r.L; const obs = Calc.observedMs(sess); const cur = Math.floor(obs / L);
-      const map = Calc.intervalMap(sess, id); const idata = Calc.intervalData(sess, id);
-      const pending = []; for(let k = r.completed - 1; k >= 0 && pending.length < 50; k--) if(!idata[k] || (!idata[k].value && !idata[k].skipped)) pending.push(k);
-      const curNote = idata[cur]?.notes;
-      const showP = pending.slice(0, 2);
-      const curMarked = map[cur];
-      let curCtl = '';
-      if(t.method === 'partial') curCtl = curMarked === 'yes'
-        ? `<button class="big on" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="">Marked "Occurred" in interval ${cur+1} · tap to clear</button>`
-        : `<button class="big primary" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="yes">Occurred in this interval</button>`;
-      if(t.method === 'whole') curCtl = curMarked === 'no'
-        ? `<button class="sm" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="">Interval ${cur+1} marked "Not throughout" · clear</button>`
-        : `<button class="sm" id="b_${id}_occ" data-act="intCur" data-t="${id}" data-v="no">Behavior stopped: mark "Not throughout" now</button>`;
-      body = `<div class="stack" style="gap:6px"><div class="row small"><span>Interval <b class="mono" data-intn="${id}">${cur+1}</b> · ${L/1000}-s intervals</span><span class="spacer"></span><span class="mono" data-intleft="${id}">${fmtClock(L - (obs % L))}</span> left</div>
-        <div class="prog" aria-hidden="true"><i data-intbar="${id}" style="width:${(obs % L)/L*100}%"></i></div></div>
-        ${curCtl}
-        <div class="row" style="gap:8px"><button class="sm" id="b_${id}_note" data-act="intNote" data-t="${id}">${curNote ? 'Edit note' : 'Add note'} · interval ${cur+1}</button>${curNote ? `<span class="small sub" style="flex:1;min-width:0;overflow-wrap:anywhere">“${esc(curNote)}”</span>` : ''}</div>
-        ${showP.map(k => `<div class="prompt" role="group" aria-label="Score interval ${k+1}"><p>Interval ${k+1} ended. ${w.q}</p>${idata[k]?.notes ? `<p class="small" style="font-weight:400">Note: ${esc(idata[k].notes)}</p>` : ''}<div class="btns3">
-          <button class="yes" id="b_${id}_p${k}y" data-act="intScore" data-t="${id}" data-k="${k}" data-v="yes">${w.yes}</button>
-          <button class="no" id="b_${id}_p${k}n" data-act="intScore" data-t="${id}" data-k="${k}" data-v="no">${w.no}</button>
-          <button class="ghost" id="b_${id}_p${k}s" data-act="intSkip" data-t="${id}" data-k="${k}">Leave unscored</button></div>
-          <button class="ghost sm" style="align-self:flex-start" id="b_${id}_p${k}note" data-act="intNote" data-t="${id}" data-k="${k}">${idata[k]?.notes ? 'Edit note' : 'Add note'} for interval ${k+1}</button></div>`).join('')}
-        ${pending.length > 2 ? `<p class="small sub">${pending.length - 2} earlier interval(s) not scored. Tap a cell below to score it or add a note.</p>` : ''}
-        ${stripHTML(r.cells, t, true, sess.status !== 'ended' ? cur : null, r.notes)}
-        <div class="stat"><span>Scored <b>${r.scored}</b></span><span>${w.yes} <b>${r.yes}</b></span><span>Unscored <b>${r.unscored}</b></span></div>`;
-      break;
-    }
-    case 'percent':
-      body = `<div class="${t.config.allowPrompted === false ? 'btns2' : 'btns3'}">
-          <button class="yes" id="b_${id}_c" data-act="trial" data-t="${id}" data-v="correct">Correct</button>
-          ${t.config.allowPrompted === false ? '' : `<button id="b_${id}_p" data-act="trial" data-t="${id}" data-v="prompted">Prompted</button>`}
-          <button class="no" id="b_${id}_i" data-act="trial" data-t="${id}" data-v="incorrect">Incorrect</button></div>
-        <div class="row"><span class="stat"><span>Correct <b>${r.c}</b></span><span>Prompted <b>${r.p}</b></span><span>Incorrect <b>${r.i}</b></span><span><b>${r.c}/${r.n}</b></span></span><span class="spacer"></span>
-        <button class="sm" id="b_${id}_undo" data-act="undoTarget" data-t="${id}" ${r.n ? '' : 'disabled'}>Undo last trial</button></div>`;
-      break;
-    case 'task': {
-      const run = sess.taRun?.[id]; const steps = t.config.steps || [];
-      body = run ? `<div class="tasteps">${steps.map((s, k) => `<div class="tastep"><span><b>${k+1}.</b> ${esc(s)}</span><div class="levels" role="group" aria-label="Prompt level for step ${k+1}">
-          ${LEVELS.map(l => `<button type="button" id="b_${id}_s${k}_${l.k}" data-act="taScore" data-t="${id}" data-k="${k}" data-v="${l.k}" aria-pressed="${run.scores[k] === l.k}" title="${l.label}" aria-label="${l.label}">${l.k}</button>`).join('')}</div></div>`).join('')}</div>
-          <div class="btns2"><button class="primary" id="b_${id}_fin" data-act="taFinish" data-t="${id}">Finish run</button><button class="danger" id="b_${id}_dis" data-act="taDiscard" data-t="${id}">Discard run</button></div>
-          <p class="small sub">${LEVELS.map(l => `${l.k} = ${l.label}`).join(' · ')}</p>`
-        : `<button class="big primary" id="b_${id}_start" data-act="taStart" data-t="${id}">Start a run (${steps.length} steps)</button>`;
-      body += `<div class="stat"><span>Runs <b>${r.runs}</b></span><span>Independent <b>${r.indep}/${r.scored}</b></span></div>`;
-      break;
-    }
-    case 'abc': {
-      const d = sess.abcDraft?.[id];
-      const ants = t.config.antecedents?.length ? t.config.antecedents : DEFAULT_ANTECEDENTS;
-      const cons = t.config.consequences?.length ? t.config.consequences : DEFAULT_CONSEQUENCES;
-      body = d ? `<div class="stack">
-          <p class="small"><b>Behavior marked at ${fmtClock(d.t)}</b> (${fmtWall(d.wall)})</p>
-          <label class="f">Setting / context<input type="text" id="abc_${id}_context" data-abc="${id}" data-field="context" value="${esc(d.context)}"></label>
-          <label class="f">Antecedent (what happened right before)<input type="text" id="abc_${id}_antecedent" data-abc="${id}" data-field="antecedent" value="${esc(d.antecedent)}"></label>
-          <div class="chips">${ants.map((a, k) => `<button type="button" id="abc_${id}_ac${k}" data-act="abcChip" data-t="${id}" data-field="antecedent" data-v="${esc(a)}" aria-pressed="${d.antecedent === a}">${esc(a)}</button>`).join('')}</div>
-          <label class="f">Behavior (observable description)<input type="text" id="abc_${id}_behavior" data-abc="${id}" data-field="behavior" value="${esc(d.behavior)}" placeholder="What the student did, in observable terms"></label>
-          <label class="f">Consequence (what happened right after)<input type="text" id="abc_${id}_consequence" data-abc="${id}" data-field="consequence" value="${esc(d.consequence)}"></label>
-          <div class="chips">${cons.map((a, k) => `<button type="button" id="abc_${id}_cc${k}" data-act="abcChip" data-t="${id}" data-field="consequence" data-v="${esc(a)}" aria-pressed="${d.consequence === a}">${esc(a)}</button>`).join('')}</div>
-          <label class="f">Notes (optional)<input type="text" id="abc_${id}_notes" data-abc="${id}" data-field="notes" value="${esc(d.notes)}"></label>
-          <div class="btns2"><button class="primary" id="b_${id}_save" data-act="abcSave" data-t="${id}">Save entry</button><button id="b_${id}_cancel" data-act="abcCancel" data-t="${id}">Discard</button></div></div>`
-        : `<button class="big primary" id="b_${id}_mark" data-act="abcMark" data-t="${id}">Mark behavior now</button><p class="small sub">Tap when the behavior happens to capture the time, then fill in the details.</p>`;
-      break;
-    }
-  }
-  return `<article class="tcard ${running || sess.latencyPending?.[id] ? 'active' : ''}" aria-label="${esc(t.name)}, ${m.label}">${head}${body}</article>`;
-}
 function stripHTML(cells, t, clickable, cur, notes){
   const w = INT_WORDS[t.method]; notes = notes || [];
   const out = cells.map((v, k) => {
+    if(v === 'off') return `<span class="cell off" role="img" aria-label="Interval ${k+1}: not a peer interval" title="Interval ${k+1}: not a peer interval" style="display:inline-flex;align-items:center;justify-content:center">·</span>`;
     const cls = (v === 'yes' ? 'yes' : v === 'no' ? 'no' : 'un') + (notes[k] ? ' note' : ''); const g = v === 'yes' ? '+' : v === 'no' ? '–' : '?';
     const lbl = `Interval ${k+1}: ${v === 'yes' ? w.yes : v === 'no' ? w.no : 'not scored'}${notes[k] ? '. Note: ' + notes[k] : ''}`;
     return clickable ? `<button class="cell ${cls}" id="c_${t.id}_${k}" data-act="intCycle" data-t="${t.id}" data-k="${k}" aria-label="${esc(lbl)}. Activate to score or add a note." title="${esc(lbl)}">${g}</button>`
@@ -1143,13 +1329,14 @@ function stripHTML(cells, t, clickable, cur, notes){
   });
   if(cur != null && cur >= cells.length) out.push(`<span class="cell cur" role="img" aria-label="Interval ${cur+1} in progress" style="display:inline-flex;align-items:center;justify-content:center">…</span>`);
   return `<div class="stack" style="gap:6px"><div class="strip">${out.join('')}</div>
-    <div class="legend"><span><span class="cell yes">+</span> ${w.yes}</span><span><span class="cell no">–</span> ${w.no}</span><span><span class="cell un">?</span> Not scored (excluded)</span><span><span class="notedot" aria-hidden="true"></span>Has a note</span></div></div>`;
+    <div class="legend"><span><span class="cell yes">+</span> ${w.yes}</span><span><span class="cell no">–</span> ${w.no}</span><span><span class="cell un">?</span> Not scored (excluded)</span><span><span class="notedot" aria-hidden="true"></span>Has a note</span>${cells.includes('off') ? `<span><span class="cell off">·</span> Not a peer interval</span>` : ''}</div></div>`;
 }
 function describeEvent(e){
   const tg = tgById(e.targetId); const d = e.data;
   switch(e.type){
     case 'count': return 'Occurrence (+1)';
     case 'marker': return `${d.label || 'Context event'} (context)`;
+    case 'note': return d.text || '';
     case 'episode': return `Episode ${fmtClock(d.start)}–${fmtClock(d.end)} (${fmtDur(d.end - d.start)})${d.endedBy ? ', stopped at ' + d.endedBy : ''}`;
     case 'latency': return d.outcome === 'response' ? `Response after ${fmtNum((d.response - d.trigger)/1000, 1)} s` : d.outcome === 'timeout' ? `Timed out (no response within ${tg?.config.timeoutSec || '?'} s)` : d.outcome === 'incomplete' ? 'Incomplete: session ended before a response' : 'No response (observer marked)';
     case 'interval': { const w = INT_WORDS[tg?.method] || INT_WORDS.partial; const L = (tg?.config.intervalSec || 10); return `Interval ${d.index+1} (${fmtClock(d.index*L*1000)}–${fmtClock((d.index+1)*L*1000)}): ${d.value === 'yes' ? w.yes : d.value === 'no' ? w.no : 'not scored'}${d.notes ? ' · Note: ' + d.notes : ''}`; }
@@ -1185,7 +1372,7 @@ function tick(first){
       const left = $(`[data-intleft="${t.id}"]`); if(left) left.textContent = fmtClock(L - (obs % L));
       const bar = $(`[data-intbar="${t.id}"]`); if(bar) bar.style.width = ((obs % L) / L * 100) + '%';
       if(lastCompleted[t.id] == null) lastCompleted[t.id] = done;
-      else if(done > lastCompleted[t.id]){ lastCompleted[t.id] = done; needRender = true; if(t.config.cue !== false && sess.status === 'active') cue(); }
+      else if(done > lastCompleted[t.id]){ lastCompleted[t.id] = done; needRender = true; if(t.config.cue !== false && sess.status === 'active' && !t.peerOf) cue(); }
     }
   }
   if(needRender && !first) renderLivePreservingInputs();
@@ -1203,7 +1390,7 @@ let editingTarget = null; // target id or 'new'
 function viewStudents(){
   const sel = S.ui.selStudent && stuById(S.ui.selStudent) ? S.ui.selStudent : (S.students[0]?.id || '');
   const st = stuById(sel);
-  const tgs = st ? S.targets.filter(t => t.studentId === st.id) : [];
+  const tgs = st ? S.targets.filter(t => t.studentId === st.id && !t.peerOf) : [];
   return `
   <section class="stack" style="gap:4px"><h1>Students and targets</h1>
     <p class="sub">Each student is a code you assign. Keep the key that links codes to real students outside this app, under your district's rules.</p></section>
@@ -1211,7 +1398,7 @@ function viewStudents(){
     <section class="panel" aria-labelledby="stuT" style="align-self:start">
       <header><h2 id="stuT">Students</h2><button class="primary sm" data-act="newStudent" id="btnNewStu">Add student</button></header>
       ${S.students.length ? `<div class="list" role="list">${S.students.map(s => `<button class="lrow" role="listitem" data-act="selStudent" data-id="${s.id}" id="sel_${s.id}" aria-current="${s.id === sel}">
-        <span class="t mono">${esc(s.code)}</span>${s.grade ? `<span class="chip">Grade ${esc(s.grade)}</span>` : ''}${s.demo ? '<span class="chip mark">Sample</span>' : ''}<span class="spacer"></span><span class="small sub">${S.targets.filter(t => t.studentId === s.id && !t.archived).length} targets</span></button>`).join('')}</div>`
+        <span class="t mono">${esc(s.code)}</span>${s.grade ? `<span class="chip">Grade ${esc(s.grade)}</span>` : ''}${s.demo ? '<span class="chip mark">Sample</span>' : ''}<span class="spacer"></span><span class="small sub">${S.targets.filter(t => t.studentId === s.id && !t.archived && !t.peerOf).length} targets</span></button>`).join('')}</div>`
       : `<div class="empty">No students yet.</div>`}
     </section>
     <section class="panel" aria-labelledby="tgT">
@@ -1281,7 +1468,7 @@ function filterBar(prefix){
   const f = S.ui.filters;
   const settings = [...new Set(S.sessions.map(s => s.setting).filter(Boolean))].sort();
   const observers = [...new Set(S.sessions.map(s => s.observer).filter(Boolean))].sort();
-  const tgs = S.targets.filter(t => !f.student || t.studentId === f.student);
+  const tgs = S.targets.filter(t => (!f.student || t.studentId === f.student) && !t.peerOf);
   const opt = (v, l, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`;
   return `<form class="fields" data-form="filters" aria-label="Filter sessions">
     <label class="f">Student<select id="${prefix}fStu" data-filter="student">${opt('', 'All students', f.student)}${S.students.map(s => opt(s.id, s.code, f.student)).join('')}</select></label>
@@ -1333,12 +1520,17 @@ function viewSession(id){
   <div class="row"><button class="ghost sm" data-act="goSessions" id="btnBack">← All sessions</button></div>
   <section class="panel" aria-labelledby="sesT">
     <header><div class="stack" style="gap:2px"><span class="eyebrow">Observation summary</span><h1 id="sesT" style="font-size:1.4rem"><span class="mono">${esc(st?.code)}</span> · ${fmtDate(s.date)}</h1></div>
-      <div class="row"><button class="sm" data-act="editMeta" data-id="${s.id}" id="btnEditMeta">Edit details</button><button class="sm" data-act="copyNarr" data-id="${s.id}" id="btnNarr">Copy summary text</button><button class="sm primary" data-act="pdfSession" data-id="${s.id}" id="btnPdf">PDF report</button><button class="sm" data-act="csvOne" data-id="${s.id}" id="btnCsv1">CSV</button><button class="sm danger" data-act="delSession" data-id="${s.id}" id="btnDelS">Delete</button></div></header>
+      <div class="row"><button class="sm" data-act="editMeta" data-id="${s.id}" id="btnEditMeta">Edit details</button><button class="sm primary" data-act="pdfSession" data-id="${s.id}" id="btnPdf">PDF report</button><button class="sm" data-act="csvOne" data-id="${s.id}" id="btnCsv1">CSV</button><button class="sm danger" data-act="delSession" data-id="${s.id}" id="btnDelS">Delete</button></div></header>
     <dl class="kv"><dt>Student code</dt><dd class="mono">${esc(st?.code)}</dd><dt>Setting</dt><dd>${esc(s.setting)}</dd><dt>Observer</dt><dd>${esc(s.observer || '—')}</dd>
       <dt>Date and start</dt><dd>${fmtDate(s.date)}, ${fmtTime12(s.startTime)}</dd><dt>Observed time</dt><dd class="mono">${fmtClock(Calc.observedMs(s))}${s.segments.length > 1 ? ` <span class="small sub">(paused ${s.segments.length - 1}×; paused time excluded)</span>` : ''}</dd></dl>
     ${s.metaHistory?.length ? `<details class="hist"><summary>Details edited ${s.metaHistory.length}×</summary><ul>${s.metaHistory.map(h => `<li>${new Date(h.at).toLocaleString()}: ${Object.entries(h.changes).map(([k, v]) => `${esc(k)} “${esc(v.from)}” → “${esc(v.to)}”`).join('; ')}${h.reason ? ` (${esc(h.reason)})` : ''}</li>`).join('')}</ul></details>` : ''}
     <label class="f">Notes<textarea id="sesNotes" data-input="sesNotesDetail" data-id="${s.id}">${esc(s.notes)}</textarea><span class="hint">Saved as you type. No names or identifying details.</span></label>
   </section>
+  <section class="panel" aria-labelledby="sumT"><header><h2 id="sumT">Summary</h2><div class="row"><button class="sm" data-act="regenSummary" data-id="${s.id}" id="btnRegen">Regenerate</button><button class="sm primary" data-act="copySummary" id="btnCopySum">Copy</button></div></header>
+    <textarea class="copybox" id="sumText" data-input="sumText" data-id="${s.id}" rows="8" aria-label="Session summary">${esc(summaryOf(s))}</textarea>
+    <p class="small sub">${s.summaryText ? 'Edited by you. Regenerate to rebuild it from the data.' : 'Built from the recorded data, activities, and notes. Edit freely; your changes are saved and used in the PDF report.'} Review before using it in a report.</p></section>
+  ${notesPanelHTML(s)}
+  ${peerComparisonHTML(s)}
   ${tgs.map(t => targetSummary(s, t)).join('')}
   ${contextSummaryHTML(s)}
   <section class="panel" aria-labelledby="tlT"><header><h2 id="tlT">Timeline</h2><span class="small sub">${evs.length} entries · edits keep the original timestamp and a history</span></header>
@@ -1391,37 +1583,89 @@ function abcTable(s, t){
 }
 
 /* ---------- narrative summary text ---------- */
-function narrative(s){
-  const st = stuById(s.studentId); const obs = Calc.observedMs(s);
-  const parts = [`On ${fmtDate(s.date)}, ${st?.code} was observed during ${s.setting}${s.observer ? ` by ${s.observer}` : ''} for ${fmtDur(obs)} of observed time.`];
-  for(const t of s.targetIds.map(tgById).filter(Boolean)){
-    const r = Calc.summarize(s, t); const n = t.name;
-    switch(t.method){
-      case 'frequency': parts.push(`${n} occurred ${r.count} time${r.count === 1 ? '' : 's'} (${fmtNum(r.value, 2)} per minute).`); break;
-      case 'duration': parts.push(`${n} was observed in ${r.episodes} episode${r.episodes === 1 ? '' : 's'} totaling ${fmtDur(r.total)} (${fmtNum(r.value, 1)}% of observed time${r.episodes ? `; mean episode ${fmtDur(r.mean)}` : ''}).`); break;
-      case 'latency': parts.push(`${n}: across ${r.trials} instruction${r.trials === 1 ? '' : 's'}, a response followed ${r.responded} time${r.responded === 1 ? '' : 's'}${r.responded ? ` with a mean latency of ${fmtNum(r.value, 1)} seconds` : ''}${r.noResp ? `; ${r.noResp} had no response` : ''}${r.timeouts ? `; ${r.timeouts} timed out` : ''}.`); break;
-      case 'partial': case 'whole': case 'mts': parts.push(`Using ${METHODS[t.method].label.toLowerCase()} recording with ${r.L/1000}-second intervals, ${n.toLowerCase()} was scored "${INT_WORDS[t.method].yes.toLowerCase()}" in ${r.yes} of ${r.scored} scored intervals (${r.scored ? fmtNum(r.value, 1) : '—'}%)${r.unscored ? `; ${r.unscored} interval${r.unscored === 1 ? ' was' : 's were'} not scored and ${r.unscored === 1 ? 'is' : 'are'} excluded` : ''}.`); break;
-      case 'percent': parts.push(`${n}: ${r.c} of ${r.n} trials correct independently (${r.n ? fmtNum(r.value, 1) : '—'}%)${r.p ? `, plus ${r.p} correct with a prompt` : ''}.`); break;
-      case 'task': parts.push(`${n}: across ${r.runs} run${r.runs === 1 ? '' : 's'}, ${r.indep} of ${r.scored} steps were completed independently (${r.scored ? fmtNum(r.value, 1) : '—'}%).`); break;
-      case 'abc': parts.push(`${r.count} ABC entr${r.count === 1 ? 'y was' : 'ies were'} recorded for ${n.toLowerCase()}; antecedents and consequences are listed in the ABC table.`); break;
-    }
-  }
-  const ctx = markerSummary(s).filter(x => x.n > 0);
-  if(ctx.length) parts.push(`Context events recorded by the observer: ${ctx.map(x => `${x.m.label.toLowerCase()} ${x.n} time${x.n === 1 ? '' : 's'} (${fmtNum(x.rate, 2)} per minute)`).join('; ')}.`);
-  if(s.notes) parts.push(`Observer notes: ${s.notes}`);
-  return parts.join(' ');
+function activitySegments(s){
+  const obs = Calc.observedMs(s);
+  const acts = Calc.events(s, '_note', 'note').filter(e => e.data.kind === 'activity').sort((a,b) => a.t - b.t);
+  const segs = [{label:s.setting || 'Start of session', start:0}];
+  for(const a of acts){ if(a.t <= 1000 && segs.length === 1) segs[0].label = a.data.text; else segs.push({label:a.data.text, start:a.t}); }
+  segs.forEach((g, i) => { g.end = i < segs.length - 1 ? segs[i+1].start : obs; });
+  return segs.filter((g, i) => g.end > g.start || i === segs.length - 1);
 }
+function actName(label){ let x = String(label || '').trim().replace(/^(now|starting|start|started|beginning|begin|began|switch(ed)?\s+to|mov(ed|ing)?\s+to|transition(ed)?\s+to)\s+/i, ''); return x && /^[A-Z][a-z]/.test(x) ? x[0].toLowerCase() + x.slice(1) : x; }
+function segmentBreakdown(s, t, segs){
+  if(segs.length < 2) return [];
+  const out = [];
+  for(const g of segs){
+    const nm = actName(g.label); let txt = null;
+    if(INTERVAL_METHODS.includes(t.method)){
+      const L = (t.config.intervalSec || 10) * 1000; const map = Calc.intervalMap(s, t.id); let y = 0, n = 0;
+      for(const [k, v] of Object.entries(map)){ const end = (+k + 1) * L; if(end <= g.start || end > g.end || !isScheduled(s, t, +k)) continue; if(v === 'yes') y++; else if(v === 'no') n++; }
+      if(y + n) txt = `${fmtNum(y/(y+n)*100, 1)}% during ${nm} (${y} of ${y+n})`;
+    } else if(t.method === 'frequency'){
+      const c = Calc.events(s, t.id, 'count').filter(e => e.t >= g.start && e.t < g.end).length; const min = (g.end - g.start) / 60000;
+      if(min > 0) txt = `${c} during ${nm} (${fmtNum(c/min, 2)} per minute)`;
+    } else if(t.method === 'duration'){
+      const tot = sum(Calc.events(s, t.id, 'episode').map(e => Math.max(0, Math.min(e.data.end, g.end) - Math.max(e.data.start, g.start))));
+      if(g.end > g.start) txt = `${fmtNum(tot/(g.end - g.start)*100, 1)}% of the time during ${nm}`;
+    }
+    if(txt) out.push(txt);
+  }
+  return out.length >= 2 ? out : [];
+}
+function targetSentence(s, t, r){
+  const n = t.name;
+  switch(t.method){
+    case 'frequency': return `${n} occurred ${r.count} time${r.count === 1 ? '' : 's'} (${fmtNum(r.value, 2)} per minute).`;
+    case 'duration': return `${n} was observed in ${r.episodes} episode${r.episodes === 1 ? '' : 's'} totaling ${fmtDur(r.total)} (${fmtNum(r.value, 1)}% of observed time${r.episodes ? `; mean episode ${fmtDur(r.mean)}` : ''}).`;
+    case 'latency': return `${n}: across ${r.trials} instruction${r.trials === 1 ? '' : 's'}, a response followed ${r.responded} time${r.responded === 1 ? '' : 's'}${r.responded ? ` with a mean latency of ${fmtNum(r.value, 1)} seconds` : ''}${r.noResp ? `; ${r.noResp} had no response` : ''}${r.timeouts ? `; ${r.timeouts} timed out` : ''}.`;
+    case 'partial': case 'whole': case 'mts': return `Using ${METHODS[t.method].label.toLowerCase()} recording with ${r.L/1000}-second intervals, ${n.toLowerCase()} was scored "${INT_WORDS[t.method].yes.toLowerCase()}" in ${r.yes} of ${r.scored} scored intervals (${r.scored ? fmtNum(r.value, 1) : '—'}%)${r.unscored ? `; ${r.unscored} interval${r.unscored === 1 ? ' was' : 's were'} not scored and ${r.unscored === 1 ? 'is' : 'are'} excluded` : ''}.`;
+    case 'percent': return `${n}: ${r.c} of ${r.n} trials correct independently (${r.n ? fmtNum(r.value, 1) : '—'}%)${r.p ? `, plus ${r.p} correct with a prompt` : ''}.`;
+    case 'task': return `${n}: across ${r.runs} run${r.runs === 1 ? '' : 's'}, ${r.indep} of ${r.scored} steps were completed independently (${r.scored ? fmtNum(r.value, 1) : '—'}%).`;
+    case 'abc': return `${r.count} ABC entr${r.count === 1 ? 'y was' : 'ies were'} recorded for ${n.toLowerCase()}; antecedents and consequences are listed in the ABC table.`;
+  }
+  return '';
+}
+/* Plain-language summary built from the recorded data, activities, and notes. No AI; nothing leaves the device. */
+function narrative(s){
+  const st = stuById(s.studentId); const obs = Calc.observedMs(s); const segs = activitySegments(s);
+  const paras = [];
+  let p1 = `On ${fmtDate(s.date)}, ${st?.code} was observed during ${s.setting}${s.observer ? ` by ${s.observer}` : ''} for ${fmtDur(obs)} of observed time.`;
+  if(segs.length >= 2) p1 += ` Activities: ${segs.map(g => `${actName(g.label)} (${fmtClock(g.start)}–${fmtClock(g.end)})`).join('; ')}.`;
+  paras.push(p1);
+  const body = [];
+  for(const t of s.targetIds.map(tgById).filter(Boolean)){
+    if(t.peerOf) continue;
+    const r = Calc.summarize(s, t); let line = targetSentence(s, t, r);
+    const br = segmentBreakdown(s, t, segs); if(br.length) line += ` By activity: ${br.join('; ')}.`;
+    const pt = peerIn(s, t);
+    if(pt){ const b = Calc.summarize(s, pt); const N = peerEveryOf(s, pt);
+      line += ` Peer comparison for ${t.name.toLowerCase()}${INTERVAL_METHODS.includes(t.method) && N > 1 ? ` (peer scored ${ordinalEvery(N)})` : ''}: target student ${metricText(r, t)}; peer ${metricText(b, pt)}.`;
+      const pbr = segmentBreakdown(s, pt, segs); if(pbr.length) line += ` Peer by activity: ${pbr.join('; ')}.`; }
+    body.push(line);
+  }
+  if(body.length) paras.push(body.join(' '));
+  const ctx = markerSummary(s).filter(x => x.n > 0);
+  if(ctx.length) paras.push(`Context events recorded by the observer: ${ctx.map(x => `${x.m.label.toLowerCase()} ${x.n} time${x.n === 1 ? '' : 's'} (${fmtNum(x.rate, 2)} per minute)`).join('; ')}.`);
+  const notes = Calc.events(s, '_note', 'note').filter(e => e.data.kind !== 'activity').sort((a,b) => a.t - b.t).map(e => `${fmtClock(e.t)} ${e.data.text.replace(/[.\s]+$/, '')}`);
+  const inotes = [];
+  for(const t of s.targetIds.map(tgById).filter(Boolean)) if(INTERVAL_METHODS.includes(t.method)){ const d = Calc.intervalData(s, t.id); Object.keys(d).map(Number).sort((a,b) => a-b).forEach(k => { if(d[k].notes) inotes.push(`${t.name}, interval ${k+1}: ${d[k].notes.replace(/[.\s]+$/, '')}`); }); }
+  if(notes.length) paras.push(`Observer notes: ${notes.join('; ')}.`);
+  if(inotes.length) paras.push(`Interval notes: ${inotes.join('; ')}.`);
+  if(s.notes) paras.push(`Additional notes: ${s.notes}`);
+  return paras.join('\n\n');
+}
+function summaryOf(s){ return s.summaryText || narrative(s); }
 
 /* =====================================================================
    Charts (SVG)
    ===================================================================== */
 const LIGHT = {ink:'#12222A', ink2:'#47595F', grid:'#D9E2E0', accent:'#0A6365', mark:'#8A4C00', bg:'#FFFFFF'};
 function niceMax(v){ if(!(v > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
-function trendChartSVG(points, {yLabel, goal, isPct, colors}){
+function trendChartSVG(points, {yLabel, goal, isPct, colors, peer}){
   // points: [{label, value}] ; uses css vars unless colors given (for PDF)
   const C = colors || {ink:'var(--ink)', ink2:'var(--ink-2)', grid:'var(--chart-grid)', accent:'var(--accent)', mark:'var(--mark)', bg:'var(--surface)'};
-  const W = 680, H = 300, ml = 62, mr = 20, mt = 22, mb = 64;
-  const vals = points.map(p => p.value).filter(v => v != null);
+  const W = 680, H = 300, ml = 62, mr = 20, mt = peer ? 40 : 22, mb = 64;
+  const vals = points.map(p => p.value).concat(peer || []).filter(v => v != null);
   let ymax = isPct ? 100 : niceMax(Math.max(...vals, goal ?? 0, 0) * 1.1);
   const ticks = 5; const iw = W - ml - mr, ih = H - mt - mb;
   const x = i => ml + (points.length === 1 ? iw/2 : i * iw / (points.length - 1));
@@ -1438,6 +1682,14 @@ function trendChartSVG(points, {yLabel, goal, isPct, colors}){
   g += `<text x="${ml + iw/2}" y="${H - 14}" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700">Session date</text>`;
   g += `<text transform="translate(16 ${mt + ih/2}) rotate(-90)" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700">${esc(yLabel)}</text>`;
   if(goal != null && goal <= ymax){ const gy = y(goal); g += `<line x1="${ml}" x2="${W - mr}" y1="${gy}" y2="${gy}" stroke="${C.mark}" stroke-width="2" stroke-dasharray="6 5"/><text x="${W - mr}" y="${gy - 6}" text-anchor="end" font-size="12" fill="${C.mark}" font-weight="700">Goal ${fmtNum(goal, goal < 2 ? 2 : 1)}</text>`; }
+  if(peer){
+    let pp = '', pn = false;
+    peer.forEach((v, i) => { if(v == null){ pn = false; return; } pp += (pn ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; pn = true; });
+    g += `<path d="${pp}" fill="none" stroke="${C.ink2}" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    peer.forEach((v, i) => { if(v == null) return; g += `<rect x="${x(i) - 4.5}" y="${y(v) - 4.5}" width="9" height="9" fill="${C.bg}" stroke="${C.ink2}" stroke-width="2"><title>${esc(points[i].label)} peer: ${fmtNum(v, 2)}</title></rect>`; });
+    g += `<g font-size="12" fill="${C.ink}"><line x1="${ml}" x2="${ml + 22}" y1="16" y2="16" stroke="${C.accent}" stroke-width="2.5"/><circle cx="${ml + 11}" cy="16" r="4" fill="${C.bg}" stroke="${C.accent}" stroke-width="2.5"/><text x="${ml + 30}" y="20">Target student</text>
+      <line x1="${ml + 140}" x2="${ml + 162}" y1="16" y2="16" stroke="${C.ink2}" stroke-width="2" stroke-dasharray="5 4"/><rect x="${ml + 146.5}" y="11.5" width="9" height="9" fill="${C.bg}" stroke="${C.ink2}" stroke-width="2"/><text x="${ml + 170}" y="20">Peer comparison</text></g>`;
+  }
   // line with gaps for nulls
   let path = '', pen = false;
   points.forEach((p, i) => { if(p.value == null){ pen = false; return; } path += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.value).toFixed(1) + ' '; pen = true; });
@@ -1447,6 +1699,150 @@ function trendChartSVG(points, {yLabel, goal, isPct, colors}){
   if(points.length) { const li = points.length - 1, lv = points[li].value; if(lv != null) g += `<text x="${Math.min(x(li), W - mr - 4)}" y="${y(lv) - 12}" text-anchor="end" font-size="12" font-weight="700" fill="${C.ink}">${fmtNum(lv, lv < 2 ? 2 : 1)}</text>`; }
   return g + `</svg>`;
 }
+const CAT_LIGHT = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300'];
+function palette(colors){ return colors ? {s:CAT_LIGHT, other:'#9a9893'} : {s:[1,2,3,4,5,6].map(i => `var(--s${i})`), other:'var(--s-other)'}; }
+function chartColors(colors){ return colors || {ink:'var(--ink)', ink2:'var(--ink-2)', grid:'var(--chart-grid)', accent:'var(--accent)', mark:'var(--mark)', bg:'var(--surface)'}; }
+const roundTop = (x, y, w, h, r) => { r = Math.min(r, w/2, h); return h <= 0 ? '' : `M${x},${y+h} V${y+r} Q${x},${y} ${x+r},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h} Z`; };
+const roundRight = (x, y, w, h, r) => { r = Math.min(r, h/2, w); return w <= 0 ? '' : `M${x},${y} H${x+w-r} Q${x+w},${y} ${x+w},${y+r} V${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} H${x} Z`; };
+/* Vertical bars: one group per session, a bar per series (student, peer). */
+function barChartSVG({cats, series, yLabel, isPct, goal, colors, dp = 1}){
+  const C = chartColors(colors);
+  const W = 680, H = 300, ml = 62, mr = 20, mt = series.length > 1 || goal != null ? 40 : 22, mb = 64, iw = W - ml - mr, ih = H - mt - mb;
+  const vals = series.flatMap(x => x.values).filter(v => v != null);
+  const ymax = isPct ? 100 : niceMax(Math.max(...vals, goal ?? 0, 0) * 1.1);
+  const y = v => mt + ih - v / ymax * ih; const n = cats.length; const band = iw / Math.max(n, 1);
+  const gap = 2; const bw = Math.max(4, Math.min(34, (band * 0.72 - gap * (series.length - 1)) / series.length));
+  const font = colors ? 'font-family="Helvetica, Arial, sans-serif"' : '';
+  let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart: ${esc(yLabel)} by session" ${font}>`;
+  if(colors) g += `<rect width="${W}" height="${H}" fill="${C.bg}"/>`;
+  for(let k = 0; k <= 5; k++){ const v = ymax * k / 5; g += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="${C.grid}"/><text x="${ml - 8}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="${C.ink2}">${fmtNum(v, ymax < 2 ? 2 : (ymax < 10 ? 1 : 0))}</text>`; }
+  const showVals = n * series.length <= 16;
+  cats.forEach((c, i) => {
+    const gx = ml + band * i + (band - (bw * series.length + gap * (series.length - 1))) / 2;
+    series.forEach((sr, j) => { const v = sr.values[i]; if(v == null) return; const x = gx + j * (bw + gap); const yy = y(v);
+      g += `<path d="${roundTop(x, yy, bw, mt + ih - yy, 4)}" fill="${sr.color}"><title>${esc(c)} · ${esc(sr.name)}: ${fmtNum(v, dp)}</title></path>`;
+      if(showVals) g += `<text x="${x + bw/2}" y="${yy - 5}" text-anchor="middle" font-size="11" fill="${C.ink}" class="strong">${fmtNum(v, isPct || v >= 10 ? 0 : dp)}</text>`; });
+  });
+  const step = Math.ceil(n / 10);
+  cats.forEach((c, i) => { if(i % step === 0 || i === n - 1) g += `<text x="${ml + band * i + band/2}" y="${mt + ih + 18}" text-anchor="middle" font-size="12" fill="${C.ink2}">${esc(c)}</text>`; });
+  g += `<line x1="${ml}" x2="${W - mr}" y1="${mt + ih}" y2="${mt + ih}" stroke="${C.ink2}"/>`;
+  g += `<text x="${ml + iw/2}" y="${H - 14}" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700" class="strong">Session date</text>`;
+  g += `<text transform="translate(16 ${mt + ih/2}) rotate(-90)" text-anchor="middle" font-size="13" fill="${C.ink}" font-weight="700" class="strong">${esc(yLabel)}</text>`;
+  if(goal != null && goal <= ymax){ const gy = y(goal); g += `<line x1="${ml}" x2="${W - mr}" y1="${gy}" y2="${gy}" stroke="${C.mark}" stroke-width="2" stroke-dasharray="6 5"/><line x1="${W - mr - 98}" x2="${W - mr - 74}" y1="16" y2="16" stroke="${C.mark}" stroke-width="2" stroke-dasharray="6 5"/><text x="${W - mr}" y="20" text-anchor="end" font-size="12" fill="${C.mark}" font-weight="700">Goal ${fmtNum(goal, goal < 2 ? 2 : 1)}</text>`; }
+  if(series.length > 1) series.forEach((sr, j) => { const lx = ml + j * 150; g += `<rect x="${lx}" y="9" width="14" height="14" rx="3" fill="${sr.color}"/><text x="${lx + 20}" y="20" font-size="12" fill="${C.ink}" class="strong">${esc(sr.name)}</text>`; });
+  return g + `</svg>`;
+}
+/* Horizontal bars: one row per setting (long labels stay readable). */
+function hbarSVG({rows, series, unit, isPct, colors, dp = 1}){
+  const C = chartColors(colors); const per = series.length; const rowH = per > 1 ? 44 : 32;
+  const W = 680, ml = 210, mr = 60, mt = per > 1 ? 34 : 12, iw = W - ml - mr; const H = mt + rows.length * rowH + 30;
+  const vals = rows.flatMap(r => r.values).filter(v => v != null);
+  const xmax = isPct ? 100 : niceMax(Math.max(...vals, 0) * 1.1); const x = v => ml + v / xmax * iw;
+  const font = colors ? 'font-family="Helvetica, Arial, sans-serif"' : '';
+  let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bar chart by setting: ${esc(unit)}" ${font}>`;
+  if(colors) g += `<rect width="${W}" height="${H}" fill="${C.bg}"/>`;
+  for(let k = 0; k <= 4; k++){ const v = xmax * k / 4; g += `<line x1="${x(v)}" x2="${x(v)}" y1="${mt}" y2="${H - 26}" stroke="${C.grid}"/><text x="${x(v)}" y="${H - 10}" text-anchor="middle" font-size="11" fill="${C.ink2}">${fmtNum(v, xmax < 2 ? 2 : (xmax < 10 ? 1 : 0))}</text>`; }
+  rows.forEach((r, i) => {
+    const top = mt + i * rowH + 4; const bh = per > 1 ? 15 : 20;
+    const lbl = r.label.length > 28 ? r.label.slice(0, 27) + '…' : r.label;
+    g += `<text x="${ml - 10}" y="${top + (per > 1 ? 18 : 14)}" text-anchor="end" font-size="12" fill="${C.ink}" class="strong"><title>${esc(r.label)}</title>${esc(lbl)}</text>`;
+    g += `<text x="${ml - 10}" y="${top + (per > 1 ? 32 : 27)}" text-anchor="end" font-size="10.5" fill="${C.ink2}">${r.n} session${r.n === 1 ? '' : 's'}</text>`;
+    series.forEach((sr, j) => { const v = r.values[j]; const yy = top + j * (bh + 2); if(v == null){ g += `<text x="${ml + 4}" y="${yy + bh - 4}" font-size="11" fill="${C.ink2}">no data</text>`; return; }
+      g += `<path d="${roundRight(ml, yy, x(v) - ml, bh, 4)}" fill="${sr.color}"><title>${esc(r.label)} · ${esc(sr.name)}: ${fmtNum(v, dp)}</title></path><text x="${x(v) + 6}" y="${yy + bh - 4}" font-size="11.5" fill="${C.ink}" class="strong">${fmtNum(v, dp)}</text>`; });
+  });
+  g += `<line x1="${ml}" x2="${ml}" y1="${mt}" y2="${H - 26}" stroke="${C.ink2}"/>`;
+  if(per > 1) series.forEach((sr, j) => { const lx = ml + j * 150; g += `<rect x="${lx}" y="8" width="14" height="14" rx="3" fill="${sr.color}"/><text x="${lx + 20}" y="19" font-size="12" fill="${C.ink}" class="strong">${esc(sr.name)}</text>`; });
+  return g + `</svg>`;
+}
+/* Donut(s): parts of a whole, pooled across sessions. One donut per group (student, peer). */
+function pieChartSVG({groups, labels, unit, colors}){
+  const C = chartColors(colors); const P = palette(colors);
+  const color = (lab, idx) => lab.other ? P.other : P.s[idx % P.s.length];
+  const W = 680, H = 300; const two = groups.length > 1; const r = two ? 82 : 112;
+  const font = colors ? 'font-family="Helvetica, Arial, sans-serif"' : '';
+  let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pie chart: ${esc(groups.map(gr => gr.name + ' ' + labels.map((l, i) => `${l.label} ${gr.values[i]}`).join(', ')).join('; '))}" ${font}>`;
+  if(colors) g += `<rect width="${W}" height="${H}" fill="${C.bg}"/>`;
+  const cxs = two ? [96, 282] : [160];
+  groups.forEach((gr, gi) => {
+    const cx = cxs[gi], cy = two ? 168 : 162; const total = sum(gr.values);
+    g += `<text x="${cx}" y="${two ? 48 : 30}" text-anchor="middle" font-size="13" font-weight="700" fill="${C.ink}" class="strong">${esc(two ? gr.name : 'Total')}: ${total} ${esc(unit)}</text>`;
+    if(!total){ g += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.grid}"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="12" fill="${C.ink2}">No data</text>`; return; }
+    let a0 = -Math.PI / 2;
+    gr.values.forEach((v, i) => { if(!v) return; const a1 = a0 + v / total * Math.PI * 2; const big = a1 - a0 > Math.PI ? 1 : 0;
+      const pt = (a, rad) => `${(cx + rad * Math.cos(a)).toFixed(2)},${(cy + rad * Math.sin(a)).toFixed(2)}`;
+      const d = v === total ? `M${cx - r},${cy} A${r},${r} 0 1 1 ${cx + r},${cy} A${r},${r} 0 1 1 ${cx - r},${cy} Z`
+        : `M${cx},${cy} L${pt(a0, r)} A${r},${r} 0 ${big} 1 ${pt(a1, r)} Z`;
+      g += `<path d="${d}" fill="${color(labels[i], i)}" stroke="${C.bg}" stroke-width="2" stroke-linejoin="round"><title>${esc(gr.name)} · ${esc(labels[i].label)}: ${v} (${fmtNum(v/total*100, 1)}%)</title></path>`;
+      a0 = a1; });
+  });
+  // legend with values (identity never by color alone)
+  const lx = two ? 392 : 330; const ly0 = Math.max(30, H/2 - labels.length * 15); const maxL = two ? 15 : 24;
+  const colX = two ? [lx + 215, lx + 280] : [lx + 320];
+  if(two) groups.forEach((gr, gi) => { g += `<text x="${colX[gi]}" y="${ly0 - 10}" text-anchor="end" font-size="11" fill="${C.ink2}">${gi ? 'Peer' : 'Student'}</text>`; });
+  labels.forEach((l, i) => { const yy = ly0 + i * 30;
+    g += `<rect x="${lx}" y="${yy}" width="14" height="14" rx="3" fill="${color(l, i)}"/><text x="${lx + 22}" y="${yy + 12}" font-size="12.5" fill="${C.ink}" class="strong"><title>${esc(l.label)}</title>${esc(l.label.length > maxL ? l.label.slice(0, maxL - 1) + '…' : l.label)}</text>`;
+    groups.forEach((gr, gi) => { const tot = sum(gr.values); const v = gr.values[i]; const txt = tot ? `${fmtNum(v/tot*100, 0)}% (${v})` : '—';
+      g += `<text x="${colX[gi]}" y="${yy + 12}" text-anchor="end" font-size="12" fill="${C.ink2}">${txt}</text>`; });
+  });
+  return g + `</svg>`;
+}
+/* What a pie shows for each method: parts of a whole, pooled across the sessions shown. */
+function compositionFor(t, sessions){
+  const ss = sessions.filter(s => s.targetIds.includes(t.id)); const m = {}; const add = (k, v = 1) => { m[k] = (m[k] || 0) + v; };
+  let labels = [], unit = '', title = '';
+  switch(t.method){
+    case 'partial': case 'whole': case 'mts': { const w = INT_WORDS[t.method];
+      for(const s of ss){ const r = Calc.summarize(s, t); add(w.yes, r.yes); add(w.no, r.no); add('Not scored', r.unscored); }
+      labels = [{label:w.yes}, {label:w.no}, {label:'Not scored', other:true}]; unit = 'intervals'; title = 'Interval scores'; break; }
+    case 'percent':
+      for(const s of ss){ const r = Calc.summarize(s, t); add('Correct', r.c); add('Prompted', r.p); add('Incorrect', r.i); }
+      labels = [{label:'Correct'}, {label:'Prompted'}, {label:'Incorrect'}]; unit = 'trials'; title = 'Trial results'; break;
+    case 'task':
+      for(const s of ss) Calc.summarize(s, t).byStep.forEach(b => b.levels.forEach(l => add(LEVEL_LABEL[l])));
+      labels = LEVELS.map(l => ({label:l.label})); unit = 'steps'; title = 'Prompt level per step'; break;
+    case 'latency':
+      for(const s of ss) Calc.events(s, t.id, 'latency').forEach(e => add({response:'Response', no_response:'No response', timeout:'Timed out', incomplete:'Incomplete'}[e.data.outcome]));
+      labels = [{label:'Response'}, {label:'No response'}, {label:'Timed out'}, {label:'Incomplete', other:true}]; unit = 'trials'; title = 'Trial outcomes'; break;
+    case 'duration':
+      for(const s of ss){ const r = Calc.summarize(s, t); add('Behavior occurring', Math.round(r.total / 60000 * 10) / 10); add('Not occurring', Math.round((r.obs - r.total) / 60000 * 10) / 10); }
+      labels = [{label:'Behavior occurring'}, {label:'Not occurring', other:true}]; unit = 'minutes'; title = 'Observed time'; break;
+    case 'frequency':
+      for(const s of ss) add(s.setting || 'No setting', Calc.summarize(s, t).count);
+      labels = Object.keys(m).sort((a, b) => m[b] - m[a]).map(l => ({label:l})); unit = 'occurrences'; title = 'Occurrences by setting'; break;
+    case 'abc':
+      for(const s of ss) Calc.events(s, t.id, 'abc').forEach(e => add((e.data.antecedent || 'Not recorded').trim()));
+      labels = Object.keys(m).sort((a, b) => m[b] - m[a]).map(l => ({label:l})); unit = 'entries'; title = 'Antecedents recorded'; break;
+  }
+  if(labels.length > 6){ const keep = labels.slice(0, 5); const rest = labels.slice(5); m['Other'] = sum(rest.map(l => m[l.label] || 0)); labels = [...keep, {label:'Other', other:true}]; }
+  return {labels, values: labels.map(l => Math.round((m[l.label] || 0) * 10) / 10), unit, title, sessions:ss.length};
+}
+const GRAPH_TYPES = [['line','Line'],['bar','Bar'],['pie','Pie'],['setting','By setting'],['table','Table']];
+const isPctMethod = t => ['partial','whole','mts','percent','task'].includes(t.method);
+/* Builds the selected graph and the table of its data. */
+function graphExhibit(t, list, series, type, colors){
+  const pv = peerValues(t, series); const dp = t.method === 'frequency' ? 2 : 1;
+  const accent = colors ? colors.accent : 'var(--accent)', peerC = colors ? '#7a8a90' : 'var(--ink-2)';
+  const perSession = graphTableRows(t, series); if(pv){ perSession.head.push('Peer'); perSession.rows.forEach((r, i) => r.push(pv.v[i] == null ? '—' : fmtNum(pv.v[i], dp))); }
+  perSession.head = ['Date','Setting','Observer', ...perSession.head];
+  if(type === 'bar') return {svg: barChartSVG({cats:series.map(p => p.label), series:[{name:'Target student', values:series.map(p => p.value), color:accent}, ...(pv ? [{name:'Peer', values:pv.v, color:peerC}] : [])], yLabel:METHODS[t.method].axis, isPct:isPctMethod(t), goal:t.goal?.value ?? null, colors, dp}), table:perSession, caption:'One bar per session.'};
+  if(type === 'pie'){
+    const c = compositionFor(t, list); const groups = [{name:'Target student', values:c.values}];
+    let cp = null; if(pv){ cp = compositionFor(pv.tw, list.filter(s => s.targetIds.includes(pv.tw.id))); const idx = new Map(cp.labels.map((l, i) => [l.label, i])); groups.push({name:'Peer', values:c.labels.map(l => idx.has(l.label) ? cp.values[idx.get(l.label)] : 0)}); }
+    const tot = groups.map(gr => sum(gr.values));
+    return {svg: pieChartSVG({groups, labels:c.labels, unit:c.unit, colors}), caption:`${c.title}, all ${c.sessions} session${c.sessions === 1 ? '' : 's'} shown combined.`,
+      table:{head:[c.title, ...groups.map(gr => gr.name)], rows:c.labels.map((l, i) => [l.label, ...groups.map((gr, gi) => tot[gi] ? `${gr.values[i]} (${fmtNum(gr.values[i]/tot[gi]*100, 1)}%)` : '—')])}, extra:true};
+  }
+  if(type === 'setting'){
+    const by = {}; list.filter(s => s.targetIds.includes(t.id)).forEach(s => { (by[s.setting || 'No setting'] ||= []).push(s); });
+    const rows = Object.entries(by).map(([label, ss]) => { const a = Calc.aggregate(t, ss); const pa = pv ? Calc.aggregate(pv.tw, ss.filter(x => x.targetIds.includes(pv.tw.id))) : null;
+      return {label, n:ss.length, values:[a.sessions ? a.value : null, ...(pv ? [pa && pa.sessions ? pa.value : null] : [])]}; }).sort((a, b) => (b.values[0] ?? -1) - (a.values[0] ?? -1));
+    return {svg: hbarSVG({rows, series:[{name:'Target student', color:accent}, ...(pv ? [{name:'Peer', color:peerC}] : [])], unit:METHODS[t.method].axis, isPct:isPctMethod(t), colors, dp}),
+      caption:`${METHODS[t.method].axis} by setting. Each bar combines that setting's sessions (weighted, not averaged).`,
+      table:{head:['Setting','Sessions','Target student', ...(pv ? ['Peer'] : [])], rows:rows.map(r => [r.label, r.n, ...r.values.map(v => v == null ? '—' : fmtNum(v, dp))])}, extra:true};
+  }
+  return {svg: trendChartSVG(series, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:isPctMethod(t), colors, peer:pv?.v}), table:perSession, caption:'Each point is one session.'};
+}
+function htmlTable(tb){ return `<div class="tablewrap"><table><thead><tr>${tb.head.map((h, i) => `<th class="${i ? 'n' : ''}">${esc(h)}</th>`).join('')}</tr></thead><tbody>${tb.rows.map(r => `<tr>${r.map((c, i) => `<td class="${i && !(tb.head[0] === 'Date' && i < 3) ? 'n' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
 function cumulativeChart(s, t){
   const obs = Calc.observedMs(s); const evs = Calc.events(s, t.id, 'count').map(e => e.t).sort((a,b) => a-b);
   const W = 680, H = 220, ml = 50, mr = 16, mt = 16, mb = 48; const iw = W - ml - mr, ih = H - mt - mb;
@@ -1485,25 +1881,29 @@ function graphTableRows(t, series){
    ===================================================================== */
 function viewGraphs(){
   const f = S.ui.filters;
-  let t = f.target ? tgById(f.target) : null;
-  if(!t){ const cand = S.targets.filter(x => (!f.student || x.studentId === f.student) && !x.archived); t = cand[0] || null; }
+  let t = f.target ? tgById(f.target) : null; if(t && t.peerOf) t = tgById(t.peerOf);
+  if(!t){ const cand = S.targets.filter(x => (!f.student || x.studentId === f.student) && !x.archived && !x.peerOf); t = cand[0] || null; }
   const list = filtered().filter(s => !t || s.targetIds.includes(t.id));
   const series = t ? seriesFor(t, list) : [];
-  const view = S.ui.graph?.view || 'chart';
+  S.ui.graph = S.ui.graph || {}; if(!S.ui.graph.type) S.ui.graph.type = S.ui.graph.view === 'table' ? 'table' : 'line';
+  const type = S.ui.graph.type;
   const agg = t ? Calc.aggregate(t, list) : null;
-  const tbl = t ? graphTableRows(t, series) : null;
+  const pv = t ? peerValues(t, series) : null;
+  const pagg = pv ? Calc.aggregate(pv.tw, list.filter(s => s.targetIds.includes(pv.tw.id))) : null;
+  const ex = t && series.length ? graphExhibit(t, list, series, type === 'table' ? 'line' : type) : null;
   return `
-  <section class="stack" style="gap:4px"><h1>Graphs</h1><p class="sub">Progress for one target across sessions. Pick a student and target.</p></section>
+  <section class="stack" style="gap:4px"><h1>Graphs</h1><p class="sub">Progress for one target across sessions. Pick a student and target, then a chart type.</p></section>
   <section class="panel" aria-labelledby="gfT"><header><h2 id="gfT">Filter</h2></header>${filterBar('g')}</section>
   ${t ? `<section class="panel" aria-labelledby="gT">
     <header><div class="stack" style="gap:2px"><span class="eyebrow mono">${esc(stuById(t.studentId)?.code)} · ${METHODS[t.method].label}</span><h2 id="gT">${esc(t.name)}</h2></div>
-      <div class="row"><div class="seg" role="group" aria-label="View as"><button data-act="gview" data-v="chart" aria-pressed="${view === 'chart'}" id="gvChart">Chart</button><button data-act="gview" data-v="table" aria-pressed="${view === 'table'}" id="gvTable">Table</button></div>
-      <button class="sm primary" data-act="pdfProgress" data-id="${t.id}" id="btnPdfProg" ${series.length ? '' : 'disabled'}>PDF report</button></div></header>
+      <button class="sm primary" data-act="pdfProgress" data-id="${t.id}" id="btnPdfProg" ${series.length ? '' : 'disabled'}>PDF report</button></header>
+    <div class="gtypes"><span class="small sub">Chart type</span><div class="seg" role="group" aria-label="Chart type">${GRAPH_TYPES.map(([k, l]) => `<button data-act="gtype" data-v="${k}" aria-pressed="${type === k}" id="${k === 'line' ? 'gvChart' : k === 'table' ? 'gvTable' : 'gt_' + k}">${l}</button>`).join('')}</div></div>
     ${!f.target ? `<p class="small sub">Showing the first target for this filter. Choose a target above to switch.</p>` : ''}
-    ${series.length ? (view === 'chart' ? `<div class="chart">${trendChartSVG(series, {yLabel: METHODS[t.method].axis, goal: t.goal?.value ?? null, isPct: ['partial','whole','mts','percent','task'].includes(t.method)})}</div>`
-      : `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Setting</th><th>Observer</th>${tbl.head.map(h => `<th class="n">${esc(h)}</th>`).join('')}</tr></thead><tbody>${tbl.rows.map(r => `<tr>${r.map((c, i) => `<td class="${i > 2 ? 'n' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`)
+    ${ex ? (type === 'table' ? htmlTable(ex.table)
+      : `<div class="chart">${ex.svg}</div><p class="small sub">${esc(ex.caption)}</p>${ex.extra ? htmlTable(ex.table) : ''}`)
+      + `<div class="row" role="group" aria-label="Use in a report">${type === 'table' ? '' : `<button class="sm" data-act="chartCopy" id="btnChartCopy">Copy image</button><button class="sm" data-act="chartDownload" id="btnChartDl">Download PNG</button>`}<button class="sm" data-act="tableCopy" id="btnTableCopy">Copy table</button><span class="small sub">Paste into Word, Google Docs, or your report template.</span></div>`
       : `<div class="empty">No completed sessions for this target match the filters.</div>`}
-    ${agg && agg.sessions ? `<div class="notice"><div><b>Across ${agg.sessions} session${agg.sessions === 1 ? '' : 's'}:</b> <span class="mono">${fmtNum(agg.value, 2)}</span> ${esc(t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit)}<br><span class="small sub">Weighted: ${esc(agg.note)}. Session percentages are not averaged.</span></div></div>` : ''}
+    ${agg && agg.sessions ? `<div class="notice"><div><b>Across ${agg.sessions} session${agg.sessions === 1 ? '' : 's'}:</b> <span class="mono">${fmtNum(agg.value, 2)}</span> ${esc(t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit)}<br><span class="small sub">Weighted: ${esc(agg.note)}. Session percentages are not averaged.</span>${pagg && pagg.sessions ? `<br><b>Peer across ${pagg.sessions} session${pagg.sessions === 1 ? '' : 's'}:</b> <span class="mono">${fmtNum(pagg.value, 2)}</span> ${esc(METHODS[t.method].unit)} <span class="small sub">(${esc(pagg.note)})</span>` : ''}</div></div>` : ''}
   </section>` : `<div class="empty">No targets match. Add targets in Students.</div>`}`;
 }
 
@@ -1512,7 +1912,7 @@ function viewGraphs(){
    ===================================================================== */
 function viewAbout(){
   return `
-  <section class="stack" style="gap:4px"><h1>About this prototype</h1><p class="sub">Sightline was built by a practitioner with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
+  <section class="stack" style="gap:4px"><h1>About Sightline</h1><p class="sub">Sightline was built by a practitioner with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
   <div class="grid2">
     <section class="panel"><header><h2>How your data is handled here</h2></header>
       <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
@@ -1520,7 +1920,7 @@ function viewAbout(){
         <li>The offline version runs without an internet connection. Its PDF reports use your device's print dialog: choose "Save as PDF".</li>
         <li>Clearing browser data, a private window, or a different device means the data is not there. Use Sessions → Save backup.</li>
         <li>Students are codes only. The app never asks for names, birth dates, or ID numbers, and warns if a code looks like one.</li>
-        <li>This prototype is for fictional students and mock observations. It is not FERPA or HIPAA compliant and has not been reviewed by any district.</li>
+        <li>Follow your district's policies for apps and student information. Exported PDF and CSV files leave the app, so store them as you would other records.</li>
       </ul></section>
     <section class="panel"><header><h2>Calculation rules</h2></header>
       <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
@@ -1532,8 +1932,8 @@ function viewAbout(){
         <li>ABC data is listed and counted, never labeled with a behavioral function.</li>
       </ul></section>
   </div>
-  <section class="panel"><header><h2>Before any real student data is used</h2></header>
-    <p class="sub">A district-approved version would need at least the following. Each item needs sign-off from the district's technology, privacy, and legal staff.</p>
+  <section class="panel"><header><h2>For district-wide adoption</h2></header>
+    <p class="sub">To adopt Sightline across a district, a supported version would need at least the following. Each item needs sign-off from the district's technology, privacy, and legal staff.</p>
     <div class="tablewrap"><table><thead><tr><th>Need</th><th>What it means</th></tr></thead><tbody>
       <tr><td>District review</td><td>Privacy and security review, approval under district AI and software policies, and inclusion in the approved-apps list.</td></tr>
       <tr><td>Data protection agreement</td><td>A signed agreement covering any hosting or vendor (for example a state student data privacy agreement), or hosting fully inside the district's Google Workspace or Microsoft 365 tenant under its existing agreement.</td></tr>
@@ -1552,7 +1952,7 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.3.0-2026-11-05</p></section>
+    </ul><p class="small sub">Version 1.7.2-2026-11-09</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
     <div class="row">${S.students.some(x => x.demo) ? `<button data-act="removeSample" id="btnRemoveSample">Remove sample data</button>` : `<button data-act="loadSample" id="btnLoadSample">Load sample data</button>`}<button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
     <p class="small sub">Sample data adds two fictional students (SAMPLE-01 and SAMPLE-02) with practice sessions for every recording method, for testing or training. Your own students are not changed.</p></section>`;
@@ -1564,11 +1964,11 @@ function viewAbout(){
 function csvCell(v){ let s = v == null ? '' : String(v); if(/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 function toCSV(rows){ return rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n'; }
 function summaryRows(sessions, onlyTarget){
-  const rows = [['session_id','student_code','date','start_time','setting','observer','observed_minutes','target','method','operational_definition','numerator','denominator','value','unit','calculation','unscored_intervals','session_notes']];
+  const rows = [['session_id','student_code','date','start_time','setting','observer','observed_minutes','target','role','method','operational_definition','numerator','denominator','value','unit','calculation','unscored_intervals','session_notes']];
   for(const s of sessions) for(const t of s.targetIds.map(tgById).filter(Boolean)){
-    if(onlyTarget && t.id !== onlyTarget) continue;
+    if(onlyTarget && t.id !== onlyTarget && t.peerOf !== onlyTarget) continue;
     const r = Calc.summarize(s, t); const calc = (r.rows.find(x => /Calculation|Percent/.test(x[0])) || ['', ''])[1];
-    rows.push([s.id, stuById(s.studentId)?.code, s.date, s.startTime, s.setting, s.observer, fmtNum(r.obs/60000, 2), t.name, METHODS[t.method].label, t.definition,
+    rows.push([s.id, stuById(s.studentId)?.code, s.date, s.startTime, s.setting, s.observer, fmtNum(r.obs/60000, 2), t.name, t.peerOf ? `peer comparison${peerEveryOf(s, t) > 1 ? ' (' + ordinalEvery(peerEveryOf(s, t)) + ')' : ''}` : 'target student', METHODS[t.method].label, t.definition,
       r.num == null ? '' : (t.method === 'duration' ? fmtNum(r.num/1000, 1) + ' s' : fmtNum(r.num, t.method === 'latency' ? 1 : 0)),
       r.den == null ? '' : (t.method === 'frequency' ? fmtNum(r.den, 2) + ' min' : t.method === 'duration' ? fmtNum(r.den/1000, 1) + ' s' : String(r.den)),
       r.value == null ? '' : fmtNum(r.value, 2), t.method === 'abc' ? 'entries' : METHODS[t.method].unit, calc, r.unscored ?? '', s.notes]);
@@ -1576,16 +1976,16 @@ function summaryRows(sessions, onlyTarget){
   return rows;
 }
 function eventRows(sessions, onlyTarget){
-  const rows = [['session_id','student_code','date','setting','observer','target','method','entry_type','session_time_sec','clock_time','status','edits','interval_number','score_or_result','duration_sec','latency_sec','outcome','task_steps','context','antecedent','behavior','consequence','notes','description']];
+  const rows = [['session_id','student_code','date','setting','observer','target','role','method','entry_type','session_time_sec','clock_time','status','edits','interval_number','score_or_result','duration_sec','latency_sec','outcome','task_steps','context','antecedent','behavior','consequence','notes','description']];
   for(const s of sessions){
     for(const e of s.events.slice().sort((a,b) => a.t - b.t)){
-      if(onlyTarget && e.targetId !== onlyTarget) continue;
+      if(onlyTarget && e.targetId !== onlyTarget && tgById(e.targetId)?.peerOf !== onlyTarget) continue;
       const t = tgById(e.targetId); const d = e.data;
-      rows.push([s.id, stuById(s.studentId)?.code, s.date, s.setting, s.observer, entryName(s, e), t ? METHODS[t.method].label : (e.type === 'marker' ? 'Context button' : ''), e.type, fmtNum(e.t/1000, 1), new Date(e.wall).toISOString(), e.voided ? 'voided' : 'active', e.history.length,
+      rows.push([s.id, stuById(s.studentId)?.code, s.date, s.setting, s.observer, entryName(s, e), t ? (t.peerOf ? 'peer comparison' : 'target student') : (e.type === 'note' ? (d.kind === 'activity' ? 'activity change' : 'note') : 'context'), t ? METHODS[t.method].label : (e.type === 'marker' ? 'Context button' : ''), e.type, fmtNum(e.t/1000, 1), new Date(e.wall).toISOString(), e.voided ? 'voided' : 'active', e.history.length,
         e.type === 'interval' ? d.index + 1 : '', e.type === 'interval' ? (d.value || 'unscored') : e.type === 'trial' ? d.result : '',
         e.type === 'episode' ? fmtNum((d.end - d.start)/1000, 1) : '', e.type === 'latency' && d.outcome === 'response' ? fmtNum((d.response - d.trigger)/1000, 1) : '',
         e.type === 'latency' ? d.outcome : '', e.type === 'ta_run' ? (d.steps || []).map((st, i) => `${st}: ${LEVEL_LABEL[d.scores[i]] || 'not scored'}`).join(' | ') : '',
-        d.context || '', d.antecedent || '', d.behavior || '', d.consequence || '', d.notes || '', describeEvent(e)]);
+        d.context || '', d.antecedent || '', d.behavior || '', d.consequence || '', d.notes || d.text || '', describeEvent(e)]);
     }
   }
   return rows;
@@ -1595,6 +1995,28 @@ const stamp = () => todayISO().replace(/-/g, '');
 /* =====================================================================
    PDF (jsPDF)
    ===================================================================== */
+/* Chart image for reports: white background, title lines, 2x resolution. */
+function chartImageBlob(svg, title, subtitle){
+  const vb = (svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/) || [0, 680, 300]).slice(1).map(Number);
+  const pad = 58, sc = 2;
+  return new Promise((res, rej) => { const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = vb[0] * sc; c.height = (vb[1] + pad) * sc; const x = c.getContext('2d'); x.scale(sc, sc);
+      x.fillStyle = '#fff'; x.fillRect(0, 0, vb[0], vb[1] + pad);
+      x.fillStyle = '#12222A'; x.font = 'bold 16px Helvetica, Arial, sans-serif'; x.fillText(title, 16, 26);
+      x.fillStyle = '#47595F'; x.font = '12px Helvetica, Arial, sans-serif'; x.fillText(subtitle, 16, 46);
+      x.drawImage(img, 0, pad, vb[0], vb[1]); c.toBlob(b => b ? res(b) : rej(new Error('no image')), 'image/png'); };
+    img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+}
+function currentGraph(){
+  const f = S.ui.filters; let t = f.target ? tgById(f.target) : null; if(t && t.peerOf) t = tgById(t.peerOf);
+  if(!t){ t = S.targets.find(x => (!f.student || x.studentId === f.student) && !x.archived && !x.peerOf) || null; } if(!t) return null;
+  const list = filtered().filter(s => s.targetIds.includes(t.id)); const series = seriesFor(t, list); if(!series.length) return null;
+  const type = S.ui.graph?.type || 'line';
+  const ex = graphExhibit(t, list, series, type === 'table' ? 'line' : type, LIGHT);
+  const st = stuById(t.studentId); const tl = (GRAPH_TYPES.find(g => g[0] === type) || [0, ''])[1];
+  return {t, ex, type, title:`${st?.code || ''} · ${t.name}`, subtitle:`${METHODS[t.method].label} · ${tl === 'Table' ? 'Line' : tl} chart · ${series.length} session${series.length === 1 ? '' : 's'}, ${fmtDate(series[0].s.date)} to ${fmtDate(series[series.length-1].s.date)}`,
+    file:`chart_${(st?.code || 'student').replace(/\W+/g, '-')}_${t.name.replace(/\W+/g, '-')}_${type}_${stamp()}.png`};
+}
 function svgToPng(svg, w = 1360, h = 600){
   return new Promise((res, rej) => { const img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h); res(c.toDataURL('image/png')); };
     img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
@@ -1605,31 +2027,31 @@ function pdfBase(title){
   if(typeof doc.autoTable !== 'function'){ toast('The PDF table library did not load. Reload and try again.'); return null; }
   const W = doc.internal.pageSize.getWidth();
   doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(18, 34, 42); doc.text(title, 48, 56);
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(138, 76, 0);
-  doc.text('PROTOTYPE — fictional data only. Not for use with real student records.', 48, 72);
-  doc.setDrawColor(198, 210, 207); doc.line(48, 80, W - 48, 80);
-  return {doc, W, y:96};
+  doc.setDrawColor(198, 210, 207); doc.line(48, 70, W - 48, 70);
+  return {doc, W, y:86};
 }
 function pdfH(ctx, text, size = 12){ const {doc} = ctx; if(ctx.y > 700){ doc.addPage(); ctx.y = 56; } doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.setTextColor(18, 34, 42); doc.text(text, 48, ctx.y); ctx.y += size + 6; }
 function pdfP(ctx, text, size = 9.5, color = [71, 89, 95]){ const {doc, W} = ctx; doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(...color); const ls = doc.splitTextToSize(String(text), W - 96); for(const l of ls){ if(ctx.y > 740){ doc.addPage(); ctx.y = 56; } doc.text(l, 48, ctx.y); ctx.y += size * 1.35; } ctx.y += 4; }
 function pdfTable(ctx, head, body, opts = {}){ ctx.doc.autoTable({startY:ctx.y, head: head ? [head] : undefined, body, margin:{left:48, right:48}, styles:{fontSize:8.5, cellPadding:4, textColor:[18,34,42], lineColor:[198,210,207], lineWidth:0.5}, headStyles:{fillColor:[229,236,234], textColor:[18,34,42], fontStyle:'bold'}, theme:'grid', ...opts}); ctx.y = ctx.doc.lastAutoTable.finalY + 14; }
-async function pdfChart(ctx, svg){ try { const png = await svgToPng(svg); if(ctx.y > 520){ ctx.doc.addPage(); ctx.y = 56; } const w = ctx.W - 96, h = w * 300/680; ctx.doc.addImage(png, 'PNG', 48, ctx.y, w, h); ctx.y += h + 12; } catch(e){ pdfP(ctx, '(Chart could not be drawn in this browser; see the table.)'); } }
-function pdfFooter(doc){ const n = doc.getNumberOfPages(); for(let i = 1; i <= n; i++){ doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 89, 95); doc.text(`Generated by Sightline (prototype) on ${new Date().toLocaleString()}. Data are descriptive and require professional interpretation.`, 48, 770); doc.text(`Page ${i} of ${n}`, doc.internal.pageSize.getWidth() - 48, 770, {align:'right'}); } }
+async function pdfChart(ctx, svg){ try { const vb = (svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/) || [0, 680, 300]).slice(1).map(Number); const png = await svgToPng(svg, vb[0] * 2, vb[1] * 2); const w = ctx.W - 96, h = w * vb[1] / vb[0]; if(ctx.y + h > 740){ ctx.doc.addPage(); ctx.y = 56; } ctx.doc.addImage(png, 'PNG', 48, ctx.y, w, h); ctx.y += h + 12; } catch(e){ pdfP(ctx, '(Chart could not be drawn in this browser; see the table.)'); } }
+function pdfFooter(doc){ const n = doc.getNumberOfPages(); for(let i = 1; i <= n; i++){ doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(71, 89, 95); doc.text(`Generated by Sightline on ${new Date().toLocaleString()}. Data are descriptive and require professional interpretation.`, 48, 770); doc.text(`Page ${i} of ${n}`, doc.internal.pageSize.getWidth() - 48, 770, {align:'right'}); } }
 /* ---------- Offline reports: printable page -> device "Save as PDF" ---------- */
 const canPrintFallback = () => !window.jspdf && !isViewer();
 const hT = (head, rows, kv) => `<table>${head ? `<thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>` : ''}<tbody>${rows.map(r => `<tr>${r.map((c, i) => kv && i === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 function printReport(title, body){
   let el = document.getElementById('printArea');
   if(!el){ el = document.createElement('div'); el.id = 'printArea'; document.body.appendChild(el); }
-  el.innerHTML = `<h1>${esc(title)}</h1><div class="pnote">Prototype — fictional data only. Not for use with real student records.</div>${body}
-    <div class="foot">Generated by Sightline (prototype) on ${esc(new Date().toLocaleString())}. Data are descriptive and require professional interpretation.</div>`;
+  el.innerHTML = `<h1>${esc(title)}</h1>${body}
+    <div class="foot">Generated by Sightline on ${esc(new Date().toLocaleString())}. Data are descriptive and require professional interpretation.</div>`;
   toast('In the print window, choose "Save as PDF" as the printer.');
   setTimeout(() => { try { window.print(); } catch(e){ toast('Printing is not available here.'); } }, 150);
 }
 function sessionReportHTML(s){
   const st = stuById(s.studentId);
   let h = hT(null, [['Student code', st?.code || ''], ['Date and start time', `${fmtDate(s.date)}, ${fmtTime12(s.startTime)}`], ['Setting', s.setting], ['Observer', s.observer || '—'], ['Observed time', `${fmtDur(Calc.observedMs(s))}${s.segments.length > 1 ? ' (paused time excluded)' : ''}`]], true);
-  h += `<h2>Summary</h2><p>${esc(narrative(s))}</p>`;
+  h += `<h2>Summary</h2>${summaryOf(s).split(/\n{2,}/).map(x => `<p>${esc(x)}</p>`).join('')}`;
+  const pp = peerPairs(s);
+  if(pp.length) h += `<h2>Peer comparison</h2>` + hT(['Target','Target student','Peer','Difference (target − peer)'], pp.map(({t, p}) => { const a = Calc.summarize(s, t), b = Calc.summarize(s, p); return [t.name, metricText(a, t), metricText(b, p), metricDiff(a, b, t)]; }));
   for(const t of s.targetIds.map(tgById).filter(Boolean)){
     const r = Calc.summarize(s, t);
     h += `<div class="target"><h2>${esc(t.name)} — ${esc(METHODS[t.method].label)}</h2><p class="muted">Definition: ${esc(t.definition)}${t.goal?.text ? ` · Goal: ${esc(t.goal.text)}` : ''}</p>${hT(null, r.rows, true)}`;
@@ -1638,8 +2060,8 @@ function sessionReportHTML(s){
     if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) h += hT(['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
     if(t.method === 'duration'){ const eps = Calc.events(s, t.id, 'episode'); if(eps.length) h += hT(['#','Start','End','Duration'], eps.map((e, i) => [i+1, fmtClock(e.data.start), fmtClock(e.data.end), fmtDur(e.data.end - e.data.start)])); }
     if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); h += hT(['Step', ...runs.map((_, i) => `Run ${i+1}`), 'Independent'], r.byStep.map((b, k) => [`${k+1}. ${b.name}`, ...runs.map(e => LEVEL_LABEL[e.data.scores[k]] || '—'), `${b.indep}/${b.scored}`])); }
-    const hist = seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
-    if(hist.length >= 2) h += `<h3>Trend through this session</h3>` + trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT});
+    const hist = t.peerOf ? [] : seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
+    if(hist.length >= 2) h += `<h3>Trend through this session</h3>` + trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT, peer:peerValues(t, hist)?.v});
     h += `</div>`;
   }
   const evs = s.events.slice().sort((a,b) => a.t - b.t);
@@ -1653,8 +2075,11 @@ function progressReportHTML(t, list, series){
   const st = stuById(t.studentId); const f = S.ui.filters;
   let h = hT(null, [['Student code', st?.code || ''], ['Target', `${t.name} (${METHODS[t.method].label})`], ['Definition', t.definition], ['Goal', t.goal?.text || '—'],
     ['Sessions', `${series.length} (${fmtDate(series[0].s.date)} to ${fmtDate(series[series.length-1].s.date)})`], ['Filters', [f.setting && `Setting: ${f.setting}`, f.observer && `Observer: ${f.observer}`, f.from && `From ${f.from}`, f.to && `To ${f.to}`].filter(Boolean).join('; ') || 'None']], true);
-  h += trendChartSVG(series, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT});
-  const tbl = graphTableRows(t, series); h += hT(['Date','Setting','Observer', ...tbl.head], tbl.rows);
+  const ty = (S.ui.graph?.type && S.ui.graph.type !== 'table') ? S.ui.graph.type : 'line';
+  const ex = graphExhibit(t, list, series, ty, LIGHT);
+  h += ex.svg + `<p class="muted">${esc(ex.caption)}</p>`;
+  if(ex.extra) h += hT(ex.table.head, ex.table.rows);
+  const ps = graphExhibit(t, list, series, 'line', LIGHT).table; h += `<h3>Session data</h3>` + hT(ps.head, ps.rows);
   const agg = Calc.aggregate(t, list);
   h += `<p>Across ${agg.sessions} sessions: ${fmtNum(agg.value, 2)} ${esc(t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit)}. Weighted calculation: ${esc(agg.note)}. Session percentages are not averaged.</p>`;
   return h;
@@ -1666,7 +2091,9 @@ async function pdfSession(id){
   const ctx = pdfBase('Behavior Observation Summary'); if(!ctx) return;
   toast('Building PDF…');
   pdfTable(ctx, null, [['Student code', st?.code || ''], ['Date and start time', `${fmtDate(s.date)}, ${fmtTime12(s.startTime)}`], ['Setting', s.setting], ['Observer', s.observer || '—'], ['Observed time', `${fmtDur(Calc.observedMs(s))}${s.segments.length > 1 ? ' (paused time excluded)' : ''}`]], {columnStyles:{0:{fontStyle:'bold', cellWidth:140}}});
-  pdfH(ctx, 'Summary'); pdfP(ctx, narrative(s), 9.5, [18,34,42]);
+  pdfH(ctx, 'Summary'); for(const para of summaryOf(s).split(/\n{2,}/)) pdfP(ctx, para, 9.5, [18,34,42]);
+  const ppP = peerPairs(s);
+  if(ppP.length){ pdfH(ctx, 'Peer comparison'); pdfTable(ctx, ['Target','Target student','Peer','Difference (target − peer)'], ppP.map(({t, p}) => { const a = Calc.summarize(s, t), b = Calc.summarize(s, p); return [t.name, metricText(a, t), metricText(b, p), metricDiff(a, b, t)]; })); }
   for(const t of s.targetIds.map(tgById).filter(Boolean)){
     const r = Calc.summarize(s, t);
     pdfH(ctx, `${t.name} — ${METHODS[t.method].label}`, 11.5);
@@ -1676,8 +2103,8 @@ async function pdfSession(id){
     if(t.method === 'abc'){ const rows = Calc.events(s, t.id, 'abc'); if(rows.length) pdfTable(ctx, ['Time','Context','Antecedent','Behavior','Consequence','Notes'], rows.map(e => [fmtClock(e.t), e.data.context, e.data.antecedent, e.data.behavior, e.data.consequence, e.data.notes])); pdfP(ctx, 'ABC entries are descriptive records. They do not identify the function of the behavior.'); }
     if(t.method === 'latency'){ const tr = Calc.events(s, t.id, 'latency'); if(tr.length) pdfTable(ctx, ['#','Instruction at','Outcome','Latency'], tr.map((e, i) => [i+1, fmtClock(e.data.trigger), e.data.outcome.replace('_', ' '), e.data.outcome === 'response' ? fmtNum((e.data.response - e.data.trigger)/1000, 1) + ' s' : '—'])); }
     if(t.method === 'task' && r.runs){ const runs = Calc.events(s, t.id, 'ta_run'); pdfTable(ctx, ['Step', ...runs.map((_, i) => `Run ${i+1}`), 'Independent'], r.byStep.map((b, k) => [`${k+1}. ${b.name}`, ...runs.map(e => LEVEL_LABEL[e.data.scores[k]] || '—'), `${b.indep}/${b.scored}`])); }
-    const hist = seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
-    if(hist.length >= 2){ pdfP(ctx, `Trend for ${t.name} through this session:`); await pdfChart(ctx, trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT})); }
+    const hist = t.peerOf ? [] : seriesFor(t, S.sessions.filter(x => x.status === 'ended' && x.studentId === s.studentId && (x.date + x.startTime) <= (s.date + s.startTime)));
+    if(hist.length >= 2){ pdfP(ctx, `Trend for ${t.name} through this session:`); await pdfChart(ctx, trendChartSVG(hist, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT, peer:peerValues(t, hist)?.v})); }
   }
   const evs = s.events.slice().sort((a,b) => a.t - b.t);
   if(evs.length){ pdfH(ctx, 'Timeline'); pdfTable(ctx, ['Session time','Clock','Target','Entry','Status'], evs.map(e => [fmtClock(e.t), fmtWall(e.wall), entryName(s, e), describeEvent(e), e.voided ? 'Voided' : (e.history.length ? `Edited ${e.history.length}×` : '')]), {styles:{fontSize:7.5, cellPadding:3}}); }
@@ -1697,8 +2124,11 @@ async function pdfProgress(tid){
   const f = S.ui.filters;
   pdfTable(ctx, null, [['Student code', st?.code || ''], ['Target', `${t.name} (${METHODS[t.method].label})`], ['Definition', t.definition], ['Goal', t.goal?.text || '—'],
     ['Sessions', `${series.length} (${fmtDate(series[0].s.date)} to ${fmtDate(series[series.length-1].s.date)})`], ['Filters', [f.setting && `Setting: ${f.setting}`, f.observer && `Observer: ${f.observer}`, f.from && `From ${f.from}`, f.to && `To ${f.to}`].filter(Boolean).join('; ') || 'None']], {columnStyles:{0:{fontStyle:'bold', cellWidth:120}}});
-  await pdfChart(ctx, trendChartSVG(series, {yLabel:METHODS[t.method].axis, goal:t.goal?.value ?? null, isPct:['partial','whole','mts','percent','task'].includes(t.method), colors:LIGHT}));
-  const tbl = graphTableRows(t, series); pdfTable(ctx, ['Date','Setting','Observer', ...tbl.head], tbl.rows);
+  const ty = (S.ui.graph?.type && S.ui.graph.type !== 'table') ? S.ui.graph.type : 'line';
+  const ex = graphExhibit(t, list, series, ty, LIGHT);
+  await pdfChart(ctx, ex.svg); pdfP(ctx, ex.caption);
+  if(ex.extra) pdfTable(ctx, ex.table.head, ex.table.rows);
+  const ps = graphExhibit(t, list, series, 'line', LIGHT).table; pdfTable(ctx, ps.head, ps.rows);
   const agg = Calc.aggregate(t, list); pdfP(ctx, `Across ${agg.sessions} sessions: ${fmtNum(agg.value, 2)} ${t.method === 'abc' ? 'entries per session' : METHODS[t.method].unit}. Weighted calculation: ${agg.note}. Session percentages are not averaged.`, 9.5, [18,34,42]);
   pdfFooter(ctx.doc);
   await saveFile(`progress_${st?.code || 'student'}_${t.name.replace(/\W+/g, '_')}_${stamp()}.pdf`, ctx.doc.output('blob'), 'application/pdf');
@@ -1711,6 +2141,8 @@ function editEventDialog(s, e){
   const t = tgById(e.targetId); const d = e.data;
   let fields = '';
   switch(e.type){
+    case 'note': fields = `<label class="f">Text<input type="text" name="text" id="edText" value="${esc(d.text || '')}" required></label>
+      <fieldset><legend>Type</legend>${[['note','Note'],['activity','Activity change']].map(([v, l]) => `<label class="check"><input type="radio" name="kind" value="${v}" ${(d.kind || 'note') === v ? 'checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>`; break;
     case 'marker': case 'count': fields = `<p class="sub">An occurrence has no values to change. Void it if it was recorded by mistake.</p><label class="f">Note<input type="text" name="notes" id="edNotes" value="${esc(d.notes || '')}"></label>`; break;
     case 'episode': fields = `<div class="fields"><label class="f">Start (m:ss session time)<input type="text" name="start" id="edStart" value="${fmtClock(d.start)}" required></label><label class="f">End (m:ss)<input type="text" name="end" id="edEnd" value="${fmtClock(d.end)}" required></label></div>`; break;
     case 'latency': fields = `<label class="f">Outcome<select name="outcome" id="edOutcome">${['response','no_response','timeout','incomplete'].map(o => `<option value="${o}" ${d.outcome === o ? 'selected' : ''}>${{response:'Response', no_response:'No response', timeout:'Timed out', incomplete:'Incomplete'}[o]}</option>`).join('')}</select></label>
@@ -1727,7 +2159,8 @@ function editEventDialog(s, e){
     onSubmit: fd => {
       const reason = fd.get('reason'); let nd = {};
       switch(e.type){
-        case 'count': nd = {notes: fd.get('notes') || ''}; break;
+        case 'count': case 'marker': nd = {notes: fd.get('notes') || ''}; break;
+        case 'note': { const tx = String(fd.get('text') || '').trim(); if(!tx){ $('#edErr').textContent = 'Enter the note text, or void the entry instead.'; return false; } nd = {text:tx, kind:fd.get('kind') || 'note'}; break; }
         case 'episode': { const a = parseClock(fd.get('start')), b = parseClock(fd.get('end')); if(a == null || b == null || b <= a){ $('#edErr').textContent = 'Enter start and end as m:ss, with the end after the start.'; return false; } nd = {start:a, end:b}; break; }
         case 'latency': { const o = fd.get('outcome'); if(o === 'response'){ const l = parseFloat(fd.get('lat')); if(!(l >= 0)){ $('#edErr').textContent = 'Enter the latency in seconds for a response.'; return false; } nd = {outcome:o, response: d.trigger + Math.round(l*1000)}; } else nd = {outcome:o, response:null}; break; }
         case 'interval': nd = {value: fd.get('value') || null}; break;
@@ -1767,12 +2200,13 @@ const A = {
   latNR(el){ const s = liveSession(); const tid = el.dataset.t; const p = s.latencyPending[tid]; if(!p) return; delete s.latencyPending[tid]; record(s, tid, 'latency', {trigger:p.t, response:null, outcome:'no_response'}, p.t, p.wall); render(); },
   intCur(el){ const s = liveSession(); const t = tgById(el.dataset.t); const idx = Math.floor(Calc.observedMs(s) / (t.config.intervalSec * 1000)); scoreInterval(s, t, idx, el.dataset.v || null, 'Changed during session'); render(); },
   intScore(el){ const s = liveSession(); const t = tgById(el.dataset.t); scoreInterval(s, t, +el.dataset.k, el.dataset.v); render(); },
-  intSkip(el){ // record an explicit "unscored" so the prompt goes away but the interval still counts as not scored
-    const s = liveSession(); const t = tgById(el.dataset.t); const k = +el.dataset.k;
-    const ev = findIntervalEvent(s, t.id, k);
-    if(!ev) record(s, t.id, 'interval', {index:k, value:null, skipped:true});
-    else { ev.data.skipped = true; save(); }
-    render(); },
+  intSkip(el){ const s = liveSession(); skipInterval(s, tgById(el.dataset.t), +el.dataset.k); render(); },
+  noteActivity(){ addLiveNote('activity', $('#noteInput')?.value); },
+  activityChip(el){ addLiveNote('activity', el.dataset.v); },
+  copySummary(){ copyText($('#sumText').value, $('#sumText')); },
+  regenSummary(el){ const s = sesById(el.dataset.id);
+    const doIt = () => { delete s.summaryText; save(); render(); toast('Summary rebuilt from the data'); };
+    if(s.summaryText) confirmDialog('Rebuild the summary?', 'Your edits to the summary text will be replaced with a fresh summary built from the data and notes.', 'Rebuild summary', doIt, false); else doIt(); },
   intCycle(el){ const s = route.view === 'session' ? sesById(route.id) : liveSession(); intervalDialog(s, tgById(el.dataset.t), +el.dataset.k, false); },
   intNote(el){ const s = liveSession(); const t = tgById(el.dataset.t);
     const k = el.dataset.k != null ? +el.dataset.k : Math.floor(Calc.observedMs(s) / ((t.config.intervalSec || 10) * 1000));
@@ -1808,7 +2242,7 @@ const A = {
   restorePick(){ $('#restoreFile').click(); },
   backup(){ saveFile(`sightline_backup_${stamp()}.json`, JSON.stringify(S, null, 1), 'application/json'); },
   editMeta(el){ metaDialog(sesById(el.dataset.id)); },
-  copyNarr(el){ const txt = narrative(sesById(el.dataset.id)); openDialog({title:'Summary text', body:`<p class="small sub">Plain-language summary of this observation for a report draft. Review and edit before using it.</p><textarea class="copybox" id="narrText">${esc(txt)}</textarea>`, actions:[{label:'Close'}, {label:'Copy', kind:'primary', onClick:() => { copyText($('#narrText').value, $('#narrText')); return false; }}]}); },
+  copyNarr(el){ const txt = summaryOf(sesById(el.dataset.id)); openDialog({title:'Summary text', body:`<p class="small sub">Plain-language summary of this observation for a report draft. Review and edit before using it.</p><textarea class="copybox" id="narrText">${esc(txt)}</textarea>`, actions:[{label:'Close'}, {label:'Copy', kind:'primary', onClick:() => { copyText($('#narrText').value, $('#narrText')); return false; }}]}); },
   pdfSession(el){ pdfSession(el.dataset.id); },
   pdfProgress(el){ pdfProgress(el.dataset.id); },
   delSession(el){ const s = sesById(el.dataset.id); confirmDialog('Delete this session?', `This permanently deletes the ${fmtDate(s.date)} observation for ${esc(stuById(s.studentId)?.code)} and all ${s.events.length} entries. This cannot be undone.`, 'Delete session', () => { S.sessions = S.sessions.filter(x => x.id !== s.id); save(); go('sessions'); toast('Session deleted'); }); },
@@ -1817,7 +2251,25 @@ const A = {
     openDialog({title:'Void this entry?', body:`<p>“${esc(describeEvent(e))}” will be excluded from all calculations. It stays in the timeline, crossed out, and you can restore it.</p><label class="f">Reason (optional)<input type="text" name="reason" id="voidReason"></label>`,
       actions:[{label:'Cancel'}, {label:'Void entry', kind:'danger solid', submit:true}], onSubmit: fd => { voidEvent(e, fd.get('reason')); render(); toast('Entry voided'); }}); },
   restoreEv(el){ const s = sesById(el.dataset.s); const e = s.events.find(x => x.id === el.dataset.e); restoreEvent(e, 'Restored in review'); render(); toast('Entry restored'); },
-  gview(el){ S.ui.graph = S.ui.graph || {}; S.ui.graph.view = el.dataset.v; save(); render(); },
+  gview(el){ S.ui.graph = S.ui.graph || {}; S.ui.graph.type = el.dataset.v === 'table' ? 'table' : 'line'; save(); render(); },
+  chartDownload(){ const g = currentGraph(); if(!g) return;
+    chartImageBlob(g.ex.svg, g.title, g.subtitle).then(b => saveFile(g.file, b, 'image/png')).catch(() => toast('The image could not be made in this browser.')); },
+  chartCopy(){ const g = currentGraph(); if(!g) return;
+    const p = chartImageBlob(g.ex.svg, g.title, g.subtitle);
+    try {
+      if(!window.ClipboardItem || !navigator.clipboard?.write) throw new Error('unsupported');
+      navigator.clipboard.write([new ClipboardItem({'image/png': p})]).then(() => toast('Chart copied. Paste it into your report.'), () => toast('Copying images is blocked here. Use Download PNG instead.'));
+    } catch(e){ toast('Copying images is not available here. Use Download PNG instead.'); } },
+  tableCopy(){ const f = S.ui.filters; const g = currentGraph(); if(!g) return;
+    const type = S.ui.graph?.type || 'line'; const tb = (type === 'pie' || type === 'setting') ? g.ex.table : graphExhibit(g.t, filtered().filter(s => s.targetIds.includes(g.t.id)), seriesFor(g.t, filtered().filter(s => s.targetIds.includes(g.t.id))), 'line', LIGHT).table;
+    const tsv = [tb.head, ...tb.rows].map(r => r.join('\t')).join('\n');
+    const html = `<table border="1" cellpadding="4" style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:10pt"><caption style="text-align:left;font-weight:bold">${esc(g.title)}</caption><thead><tr>${tb.head.map(h => `<th style="background:#E5ECEA;text-align:left">${esc(h)}</th>`).join('')}</tr></thead><tbody>${tb.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    const ok = () => toast('Table copied. Paste it into your report.');
+    try {
+      if(window.ClipboardItem && navigator.clipboard?.write) navigator.clipboard.write([new ClipboardItem({'text/html': new Blob([html], {type:'text/html'}), 'text/plain': new Blob([tsv], {type:'text/plain'})})]).then(ok, () => copyText(tsv));
+      else copyText(tsv);
+    } catch(e){ copyText(tsv); } },
+  gtype(el){ S.ui.graph = S.ui.graph || {}; S.ui.graph.type = el.dataset.v; save(); render(); },
   loadSample(){ loadSampleData(); render(); toast('Sample data added'); },
   removeSample(){ if(liveSession() && stuById(liveSession().studentId)?.demo){ toast('End the observation for the sample student first.'); return; }
     confirmDialog('Remove sample data?', 'The fictional sample students, their targets, and all of their sessions will be deleted, including any practice sessions you recorded for them. Your own students are not changed.', 'Remove sample data', () => { removeSampleData(); save(); render(); toast('Sample data removed'); }); },
@@ -1856,20 +2308,21 @@ function findOrCreateStudent(code){
   return st;
 }
 const FORMS = {
+  liveNote(fd){ addLiveNote('note', fd.get('text')); },
   quick(fd){
     if(liveSession()){ toast('End the current observation first.'); return; }
     const code = String(fd.get('code') || '').trim(), setting = String(fd.get('setting') || '').trim(), name = String(fd.get('name') || '').trim(), def = String(fd.get('definition') || '').trim();
     const miss = [!code && 'student code', !setting && 'setting', !name && 'behavior name', !def && 'definition'].filter(Boolean);
     if(miss.length){ toast('Add the ' + miss.join(', ')); return; }
     const method = fd.get('method'); const st = findOrCreateStudent(code);
-    let t = S.targets.find(x => x.studentId === st.id && x.name.toLowerCase() === name.toLowerCase() && x.method === method && !x.archived);
+    let t = S.targets.find(x => x.studentId === st.id && x.name.toLowerCase() === name.toLowerCase() && x.method === method && !x.archived && !x.peerOf);
     const config = {}; if(INTERVAL_METHODS.includes(method)){ config.intervalSec = Math.max(3, +fd.get('intervalSec') || 10); config.cue = true; }
     if(method === 'latency') config.timeoutSec = 30; if(method === 'percent') config.allowPrompted = true;
     if(method === 'abc'){ config.antecedents = DEFAULT_ANTECEDENTS.slice(); config.consequences = DEFAULT_CONSEQUENCES.slice(); }
     if(!t){ t = {id:uid('tg'), studentId:st.id, name, method, definition:def, config, goal:{}, archived:false}; S.targets.push(t); }
     else { t.definition = def; Object.assign(t.config, config); }
     S.ui.quickCode = code;
-    newSession({studentId:st.id, setting, observer:String(fd.get('observer') || '').trim(), date:todayISO(), startTime:nowHM(), targetIds:[t.id]});
+    newSession({studentId:st.id, setting, observer:String(fd.get('observer') || '').trim(), date:todayISO(), startTime:nowHM(), targetIds:[t.id], peers: fd.get('peer') === 'on' ? [t.id] : [], peerEvery: +fd.get('peerEvery') || 1});
   },
   plan(fd){
     if(liveSession()){ toast('End the current observation first.'); return; }
@@ -1877,7 +2330,7 @@ const FORMS = {
     if(!ids.length){ toast('Choose at least one target'); return; }
     if(!setting){ toast('Add the setting'); $('#pSetting').focus(); return; }
     S.ui.planSetting = '';
-    newSession({studentId:fd.get('studentId'), setting, observer:String(fd.get('observer') || '').trim(), date:fd.get('date') || todayISO(), startTime:fd.get('time') || nowHM(), targetIds:ids});
+    newSession({studentId:fd.get('studentId'), setting, observer:String(fd.get('observer') || '').trim(), date:fd.get('date') || todayISO(), startTime:fd.get('time') || nowHM(), targetIds:ids, peers:fd.getAll('peers').filter(x => ids.includes(x)), peerEvery: +fd.get('peerEvery') || 1});
   },
   target(fd){
     const st = stuById(S.ui.selStudent) || S.students[0];
@@ -1926,25 +2379,29 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if(el.dataset.namecheck){ const w = document.getElementById(el.dataset.namecheck); if(w) w.textContent = nameLikeWarning(el.value); }
+  if(el.dataset.input === 'noteDraft'){ noteDraft = el.value; }
+  if(el.dataset.input === 'sumText'){ const s = sesById(el.dataset.id); if(s){ s.summaryText = el.value; save(); } }
   if(el.dataset.input === 'sessNotes'){ const s = liveSession(); if(s){ s.notes = el.value; save(); } }
   if(el.dataset.input === 'sesNotesDetail'){ const s = sesById(el.dataset.id); if(s){ s.notes = el.value; save(); } }
   if(el.dataset.abc){ const s = liveSession(); const d = s?.abcDraft?.[el.dataset.abc]; if(d){ d[el.dataset.field] = el.value; save(); } }
 });
 document.addEventListener('keydown', e => {
   if(route.view !== 'live' || $('#dlg').open) return;
+  if(e.target && e.target.id === 'noteInput'){
+    if(e.key === 'Escape'){ e.preventDefault(); e.target.blur(); }
+    if(e.key === 'Enter' && e.shiftKey){ e.preventDefault(); addLiveNote('activity', e.target.value); }
+    return;
+  }
   const tag = (e.target.tagName || '').toLowerCase(); if(['input','textarea','select'].includes(tag) || e.metaKey || e.ctrlKey || e.altKey) return;
   const s = liveSession(); if(!s) return;
-  if(e.key === 'p' || e.key === 'P'){ e.preventDefault(); s.status === 'paused' ? resumeSession(s) : pauseSession(s); return; }
-  if(e.key === 'u' || e.key === 'U'){ e.preventDefault(); undoLast(s); return; }
-  if(/^[1-9]$/.test(e.key)){
-    const t = tgById(s.targetIds[+e.key - 1]); if(!t) return; e.preventDefault();
-    const fake = {dataset:{t:t.id}};
-    if(t.method === 'frequency') A.count(fake);
-    else if(t.method === 'duration') A.durToggle(fake);
-    else if(t.method === 'latency') (s.latencyPending?.[t.id] ? A.latResp : A.latTrig)(fake);
-    else if(t.method === 'partial'){ const idx = Math.floor(Calc.observedMs(s) / (t.config.intervalSec * 1000)); scoreInterval(s, t, idx, 'yes'); render(); }
-  }
+  const k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  if(k === 'P'){ e.preventDefault(); s.status === 'paused' ? resumeSession(s) : pauseSession(s); return; }
+  if(k === 'U'){ e.preventDefault(); undoLast(s); return; }
+  if(k === 'N'){ e.preventDefault(); const n = $('#noteInput'); if(n){ n.focus(); n.scrollIntoView({block:'nearest'}); } return; }
+  if(k === '1' || k === '2' || k === '3'){ e.preventDefault(); answerActive(k === '1' ? 'yes' : k === '2' ? 'no' : 'skip'); return; }
+  if(liveKeyMap[k]){ const b = document.getElementById(liveKeyMap[k]); if(b && !b.disabled){ e.preventDefault(); b.click(); } }
 });
+document.addEventListener('toggle', e => { const d = e.target; if(d && d.dataset && d.dataset.rec){ d.open ? openRecords.add(d.dataset.rec) : openRecords.delete(d.dataset.rec); } }, true);
 document.addEventListener('visibilitychange', () => { const s = liveSession(); if(document.visibilityState === 'visible' && s && s.status === 'active') keepAwake(true); });
 
 /* ---------- boot ---------- */
