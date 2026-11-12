@@ -1937,7 +1937,7 @@ function viewGraphs(){
    ===================================================================== */
 function viewAbout(){
   return `
-  <section class="stack" style="gap:4px"><h1>About Sightline</h1><p class="sub">Sightline was built by school psychology graduate students at Fresno state with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
+  <section class="stack" style="gap:4px"><h1>About Sightline</h1><p class="sub">Sightline was built by school psychology graduate students at Fresno State with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
   <div class="grid2">
     <section class="panel"><header><h2>How your data is handled here</h2></header>
       <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
@@ -1977,7 +1977,7 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.7.4-2026-11-12</p></section>
+    </ul><p class="small sub">Version 1.7.4-2026-11-12 pilot</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
     <div class="row">${S.students.some(x => x.demo) ? `<button data-act="removeSample" id="btnRemoveSample">Remove sample data</button>` : `<button data-act="loadSample" id="btnLoadSample">Load sample data</button>`}<button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
     <p class="small sub">Sample data adds two fictional students (SAMPLE-01 and SAMPLE-02) with practice sessions for every recording method, for testing or training. Your own students are not changed.</p></section>`;
