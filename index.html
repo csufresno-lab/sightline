@@ -1256,8 +1256,29 @@ function notesBar(sess){
     ${notes.length ? `<ul class="notelog" aria-label="Latest notes">${notes.slice(0, 3).map(e => `<li><span class="mono sub">${fmtClock(e.t)}</span> ${e.data.kind === 'activity' ? '<b>Activity:</b> ' : ''}${esc(e.data.text)}</li>`).join('')}</ul>` : ''}
   </section>`;
 }
+/* Name check for notes: flags likely names, not classroom vocabulary. */
+const NOTE_OK_WORDS = new Set(`
+math mathematics ela english reading writing spelling phonics grammar literacy science social studies history geography art arts music pe gym health spanish french mandarin chinese language languages specials elective electives stem steam coding computer computers technology tech lab labs library media
+whole small group groups independent individual partner partners pair pairs work workshop time centers center stations station rotation rotations circle carpet rug calendar morning afternoon meeting meetings lesson lessons instruction direct guided practice review test tests quiz quizzes assessment assessments exam warm up warmup exit ticket bell work seatwork classwork homework project projects lab read aloud shared share journal journals free choice play recess lunch snack break breaks brain movement transition transitions arrival dismissal bus line hallway hall halls cafeteria playground field courtyard office nurse counselor counseling library assembly assemblies fire drill lockdown earthquake class classroom room resource rsp sdc gen ed general special education inclusion pullout pull push in out speech ot pt aba sel calm down corner zone zones regulation behavior chart token tokens board timer first then visual schedule
+teacher teachers peer peers aide aides para paraeducator paraprofessional student students staff principal vice assistant specialist psychologist interpreter substitute sub coach rbt bcba iep sst bip fba ieps
+monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december
+chromebook chromebooks ipad ipads google classroom lexia zearn iready i-ready kahoot seesaw khan academy prodigy raz kids epic dreambox imagine smartboard promethean
+halloween thanksgiving christmas hanukkah kwanzaa valentine valentines spring winter fall summer holiday holidays
+yes no okay ok stop wait please thanks thank you sorry
+`.split(/\s+/).filter(Boolean));
 function noteNameWarning(text){
-  return /\s[A-Z][a-z]+\s[A-Z][a-z]+/.test(text) || /\b(Mr|Mrs|Ms|Miss|Dr)\.?\s[A-Z]/.test(text);
+  text = String(text || '');
+  if(/\b(Mr|Mrs|Ms|Miss|Mx|Dr|Coach)\.?\s+[A-Z][a-z]/.test(text)) return true;
+  let sentenceStart = true;
+  for(const raw of text.split(/\s+/)){
+    const start = sentenceStart || /^["“'‘(]/.test(raw);
+    sentenceStart = /[.!?:;]["”'’)\]]*$/.test(raw);
+    const w = raw.replace(/^[^A-Za-z]+|[^A-Za-z'’-]+$/g, '').replace(/['’]s$/i, '');
+    if(!w || start || !/^[A-Z][a-z]/.test(w)) continue;   // sentence starts, lowercase words, and acronyms (ELA, IEP) are fine
+    if(w.split(/[-'’]/).every(part => !part || NOTE_OK_WORDS.has(part.toLowerCase()))) continue;
+    return true;
+  }
+  return false;
 }
 function addLiveNote(kind, text){
   const s = liveSession(); if(!s) return;
@@ -1916,7 +1937,7 @@ function viewGraphs(){
    ===================================================================== */
 function viewAbout(){
   return `
-  <section class="stack" style="gap:4px"><h1>About Sightline</h1><p class="sub">Sightline was built by school psychology graduate students at Fresno State with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
+  <section class="stack" style="gap:4px"><h1>About Sightline</h1><p class="sub">Sightline was built by school psychology graduate students at Fresno state with AI assistance, as a test of whether school psychologists can build the tools they need.</p></section>
   <div class="grid2">
     <section class="panel"><header><h2>How your data is handled here</h2></header>
       <ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
@@ -1956,7 +1977,7 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.7.3-2026-11-12</p></section>
+    </ul><p class="small sub">Version 1.7.4-2026-11-12</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
     <div class="row">${S.students.some(x => x.demo) ? `<button data-act="removeSample" id="btnRemoveSample">Remove sample data</button>` : `<button data-act="loadSample" id="btnLoadSample">Load sample data</button>`}<button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
     <p class="small sub">Sample data adds two fictional students (SAMPLE-01 and SAMPLE-02) with practice sessions for every recording method, for testing or training. Your own students are not changed.</p></section>`;
