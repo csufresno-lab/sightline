@@ -1269,7 +1269,8 @@ js
   noteDraft = ''; save(); render(); $('#noteInput')?.blur();
   js
   if(noteNameWarning(text)) toast('Reminder: use roles like "peer" or "teacher," not names. Edit the note if it includes a name.');
-  else toast(kind === 'activity' ? Activity: ${text} : 'Note added');
+  else toast(kind === 'activity' ? 
+             Activity: ${text} : 'Note added');
 }
 
 const CONTEXT_PRESETS = ['Teacher prompt','Peer interaction','Teacher praise','Redirection','Transition','Peer prompt'];
