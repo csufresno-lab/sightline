@@ -1,6 +1,6 @@
 # Sightline
 
-Sightline is a behavior observation app for school psychologists. This is a prototype: use it with fictional students only.
+Sightline is a behavior observation app for school psychologists. This version is being piloted in a Fresno State research study (IRB protocol #3743). Use it only on a district-issued device, with student codes only.
 
 It is an installable web app. After the first visit it works offline, and all data stays on the device that collected it. Nothing is sent to this website or anywhere else.
 
