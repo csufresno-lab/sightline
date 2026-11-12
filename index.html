@@ -1256,14 +1256,20 @@ function notesBar(sess){
     ${notes.length ? `<ul class="notelog" aria-label="Latest notes">${notes.slice(0, 3).map(e => `<li><span class="mono sub">${fmtClock(e.t)}</span> ${e.data.kind === 'activity' ? '<b>Activity:</b> ' : ''}${esc(e.data.text)}</li>`).join('')}</ul>` : ''}
   </section>`;
 }
-function addLiveNote(kind, text){
+js
+  function noteNameWarning(text){
+    return /\s[A-Z][a-z]+\s[A-Z][a-z]+/.test(text) || /\b(Mr|Mrs|Ms|Miss|Dr)\.?\s[A-Z]/.test(text);
+  }
+  function addLiveNote(kind, text){
   const s = liveSession(); if(!s) return;
   text = String(text || '').trim().replace(/\s+/g, ' ');
   if(!text){ toast(kind === 'activity' ? 'Type the new activity first, for example "Independent math work"' : 'Type a note first'); $('#noteInput')?.focus(); return; }
   record(s, '_note', 'note', {text, kind});
   if(kind === 'activity') S.ui.activityLabels = [text, ...(S.ui.activityLabels || []).filter(l => l.toLowerCase() !== text.toLowerCase())].slice(0, 8);
   noteDraft = ''; save(); render(); $('#noteInput')?.blur();
-  toast(kind === 'activity' ? `Activity: ${text}` : 'Note added');
+  js
+  if(noteNameWarning(text)) toast('Reminder: use roles like "peer" or "teacher," not names. Edit the note if it includes a name.');
+  else toast(kind === 'activity' ? Activity: ${text} : 'Note added');
 }
 
 const CONTEXT_PRESETS = ['Teacher prompt','Peer interaction','Teacher praise','Redirection','Transition','Peer prompt'];
