@@ -1013,10 +1013,13 @@ function intervalDialog(sess, t, k, focusNote){
     body:`<p class="small sub">${fmtClock(k*L)}–${fmtClock((k+1)*L)} session time${inProgress ? ' · in progress now' : ''}${ev && ended ? '. Changes are added to this interval\u2019s history.' : ''}</p>
       <fieldset><legend>Score</legend>${[['yes', w.yes], ['no', w.no], ['', 'Not scored']].map(([v, l], i) => `<label class="check"><input type="radio" name="value" id="iv_v${i}" value="${v}" ${val === v ? 'checked' : ''}><span>${esc(l)}</span></label>`).join('')}</fieldset>
       <label class="f">Note for this interval <span class="hint">What you saw, in observable terms. No names or identifying details.</span><textarea name="notes" id="ivNote" rows="3" placeholder="e.g. Teacher gave a 2-step direction; student looked at peer">${esc(note)}</textarea></label>
+      <p class="fieldwarn" id="ivErr" role="alert"></p><label class="check" id="ivForceRow" hidden><input type="checkbox" name="force" id="ivForce"><span>It isn't a name. Save anyway.</span></label>
       ${ended ? `<label class="f">Reason for change (optional)<input type="text" name="reason" id="ivReason"></label>` : ''}`,
     actions:[{label:'Cancel'}, {label:'Save', kind:'primary', submit:true}],
     onSubmit: fd => {
       const value = fd.get('value') || null; const notes = String(fd.get('notes') || '').trim();
+      const nmI = notes && notes !== note && !fd.get('force') ? noteNameWarning(notes) : '';
+      if(nmI){ $('#ivErr').textContent = NAME_MSG(nmI); $('#ivForceRow').hidden = false; $('#ivNote').focus(); return false; }
       const reason = fd.get('reason') || (ended ? 'Corrected in review' : 'Changed during session');
       const completed = ended ? Infinity : Math.floor(Calc.observedMs(sess) / L);
       const cur = findIntervalEvent(sess, t.id, k);
@@ -1249,6 +1252,7 @@ function notesBar(sess){
       <button type="submit" class="primary" id="btnAddNote">Add note</button>
       <button type="button" id="btnActNote" data-act="noteActivity" title="Save the text as a new activity, like Independent math work">Activity change</button>
     </form>
+    ${noteBlocked && noteBlocked.text === noteDraft.trim().replace(/\s+/g, ' ') ? `<div class="notice bad" id="noteWarn" role="alert" style="align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px">${esc(NAME_MSG(noteBlocked.word))}</span><button type="button" class="sm" id="btnNoteForce" data-act="noteForce">Save anyway (not a name)</button></div>` : ''}
     <div class="row barrow"><span class="small"><span class="sub">Activity:</span> <b>${esc(curAct.label)}</b> <span class="sub mono">since ${fmtClock(curAct.start)}</span></span>
       ${recentActs.map((l, i) => `<button type="button" class="pill" id="act_${i}" data-act="activityChip" data-v="${esc(l)}" title="Switch activity">→ ${esc(l)}</button>`).join('')}</div>
     <div class="row barrow">${ms.map(m => { const n = Calc.events(sess, m.id, 'marker').length; return `<button class="pill ctx" id="mk_${m.id}" data-act="mark" data-m="${m.id}" aria-label="Record ${esc(m.label)}. Count ${n}">${esc(m.label)} <b class="mono">${n}</b></button>`; }).join('')}
@@ -1268,7 +1272,7 @@ yes no okay ok stop wait please thanks thank you sorry
 `.split(/\s+/).filter(Boolean));
 function noteNameWarning(text){
   text = String(text || '');
-  if(/\b(Mr|Mrs|Ms|Miss|Mx|Dr|Coach)\.?\s+[A-Z][a-z]/.test(text)) return true;
+  const title = text.match(/\b(?:Mr|Mrs|Ms|Miss|Mx|Dr|Coach)\.?\s+[A-Z][A-Za-z'’-]*/); if(title) return title[0];
   let sentenceStart = true;
   for(const raw of text.split(/\s+/)){
     const start = sentenceStart || /^["“'‘(]/.test(raw);
@@ -1276,19 +1280,23 @@ function noteNameWarning(text){
     const w = raw.replace(/^[^A-Za-z]+|[^A-Za-z'’-]+$/g, '').replace(/['’]s$/i, '');
     if(!w || start || !/^[A-Z][a-z]/.test(w)) continue;   // sentence starts, lowercase words, and acronyms (ELA, IEP) are fine
     if(w.split(/[-'’]/).every(part => !part || NOTE_OK_WORDS.has(part.toLowerCase()))) continue;
-    return true;
+    return w;
   }
-  return false;
+  return '';
 }
-function addLiveNote(kind, text){
+const NAME_MSG = word => `This may include a name (“${word}”), so it was not saved. Use a role instead, like “peer” or “teacher.”`;
+let noteBlocked = null;
+function addLiveNote(kind, text, force){
   const s = liveSession(); if(!s) return;
   text = String(text || '').trim().replace(/\s+/g, ' ');
   if(!text){ toast(kind === 'activity' ? 'Type the new activity first, for example "Independent math work"' : 'Type a note first'); $('#noteInput')?.focus(); return; }
+  const nm = force ? '' : noteNameWarning(text);
+  if(nm){ noteBlocked = {kind, text, word:nm}; noteDraft = text; render(); const n = $('#noteInput'); if(n){ n.focus(); const i = n.value.indexOf(nm); if(i >= 0) n.setSelectionRange(i, i + nm.length); } return; }
+  noteBlocked = null;
   record(s, '_note', 'note', {text, kind});
   if(kind === 'activity') S.ui.activityLabels = [text, ...(S.ui.activityLabels || []).filter(l => l.toLowerCase() !== text.toLowerCase())].slice(0, 8);
   noteDraft = ''; save(); render(); $('#noteInput')?.blur();
-  if(noteNameWarning(text)) toast('Reminder: use roles like "peer" or "teacher," not names. Edit the note if it includes a name.');
-  else toast(kind === 'activity' ? `Activity: ${text}` : 'Note added');
+  toast(kind === 'activity' ? `Activity: ${text}` : 'Note added');
 }
 
 const CONTEXT_PRESETS = ['Teacher prompt','Peer interaction','Teacher praise','Redirection','Transition','Peer prompt'];
@@ -1977,7 +1985,7 @@ function viewAbout(){
       <li><b>Chromebook or Chrome on a computer:</b> select the install icon at the right end of the address bar, or open the ⋮ menu and choose <b>Install Sightline</b>.</li>
       <li><b>Android:</b> open the ⋮ menu in Chrome and choose <b>Install app</b> or <b>Add to Home screen</b>.</li>
       <li>After the first visit, Sightline opens and works with no internet connection. Updates download in the background and apply the next time you open it.</li>
-    </ul><p class="small sub">Version 1.7.4-2026-11-12 pilot</p></section>
+    </ul><p class="small sub">Version 1.7.5-2026-11-12 pilot</p></section>
   <section class="panel"><header><h2>Reset</h2></header>
     <div class="row">${S.students.some(x => x.demo) ? `<button data-act="removeSample" id="btnRemoveSample">Remove sample data</button>` : `<button data-act="loadSample" id="btnLoadSample">Load sample data</button>`}<button class="danger" data-act="clearAll" id="btnClearAll">Delete all data</button></div>
     <p class="small sub">Sample data adds two fictional students (SAMPLE-01 and SAMPLE-02) with practice sessions for every recording method, for testing or training. Your own students are not changed.</p></section>`;
@@ -2179,13 +2187,15 @@ function editEventDialog(s, e){
   }
   openDialog({title:`Edit entry · ${entryName(s, e)}`,
     body:`<p class="small sub">Recorded at ${fmtClock(e.t)} session time (${new Date(e.wall).toLocaleString()}). The original time stays the same, and this change is added to the entry's history.</p>${fields}
-      <label class="f">Reason for change (optional)<input type="text" name="reason" id="edReason" placeholder="e.g. Tapped wrong button"></label><p class="fieldwarn" id="edErr" role="alert"></p>`,
+      <label class="f">Reason for change (optional)<input type="text" name="reason" id="edReason" placeholder="e.g. Tapped wrong button"></label><p class="fieldwarn" id="edErr" role="alert"></p>${e.type === 'note' ? `<label class="check" id="edForceRow" hidden><input type="checkbox" name="force" id="edForce"><span>It isn't a name. Save anyway.</span></label>` : ''}`,
     actions:[{label:'Cancel'}, {label:'Save change', kind:'primary', submit:true}],
     onSubmit: fd => {
       const reason = fd.get('reason'); let nd = {};
       switch(e.type){
         case 'count': case 'marker': nd = {notes: fd.get('notes') || ''}; break;
-        case 'note': { const tx = String(fd.get('text') || '').trim(); if(!tx){ $('#edErr').textContent = 'Enter the note text, or void the entry instead.'; return false; } nd = {text:tx, kind:fd.get('kind') || 'note'}; break; }
+        case 'note': { const tx = String(fd.get('text') || '').trim(); if(!tx){ $('#edErr').textContent = 'Enter the note text, or void the entry instead.'; return false; }
+          const nmE = tx !== d.text && !fd.get('force') ? noteNameWarning(tx) : ''; if(nmE){ $('#edErr').textContent = NAME_MSG(nmE); $('#edForceRow').hidden = false; return false; }
+          nd = {text:tx, kind:fd.get('kind') || 'note'}; break; }
         case 'episode': { const a = parseClock(fd.get('start')), b = parseClock(fd.get('end')); if(a == null || b == null || b <= a){ $('#edErr').textContent = 'Enter start and end as m:ss, with the end after the start.'; return false; } nd = {start:a, end:b}; break; }
         case 'latency': { const o = fd.get('outcome'); if(o === 'response'){ const l = parseFloat(fd.get('lat')); if(!(l >= 0)){ $('#edErr').textContent = 'Enter the latency in seconds for a response.'; return false; } nd = {outcome:o, response: d.trigger + Math.round(l*1000)}; } else nd = {outcome:o, response:null}; break; }
         case 'interval': nd = {value: fd.get('value') || null}; break;
@@ -2227,7 +2237,8 @@ const A = {
   intScore(el){ const s = liveSession(); const t = tgById(el.dataset.t); scoreInterval(s, t, +el.dataset.k, el.dataset.v); render(); },
   intSkip(el){ const s = liveSession(); skipInterval(s, tgById(el.dataset.t), +el.dataset.k); render(); },
   noteActivity(){ addLiveNote('activity', $('#noteInput')?.value); },
-  activityChip(el){ addLiveNote('activity', el.dataset.v); },
+  activityChip(el){ addLiveNote('activity', el.dataset.v, true); },
+  noteForce(){ if(noteBlocked) addLiveNote(noteBlocked.kind, noteBlocked.text, true); },
   copySummary(){ copyText($('#sumText').value, $('#sumText')); },
   regenSummary(el){ const s = sesById(el.dataset.id);
     const doIt = () => { delete s.summaryText; save(); render(); toast('Summary rebuilt from the data'); };
@@ -2404,7 +2415,7 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if(el.dataset.namecheck){ const w = document.getElementById(el.dataset.namecheck); if(w) w.textContent = nameLikeWarning(el.value); }
-  if(el.dataset.input === 'noteDraft'){ noteDraft = el.value; }
+  if(el.dataset.input === 'noteDraft'){ noteDraft = el.value; if(noteBlocked && noteBlocked.text !== el.value.trim().replace(/\s+/g, ' ')){ noteBlocked = null; $('#noteWarn')?.remove(); } }
   if(el.dataset.input === 'sumText'){ const s = sesById(el.dataset.id); if(s){ s.summaryText = el.value; save(); } }
   if(el.dataset.input === 'sessNotes'){ const s = liveSession(); if(s){ s.notes = el.value; save(); } }
   if(el.dataset.input === 'sesNotesDetail'){ const s = sesById(el.dataset.id); if(s){ s.notes = el.value; save(); } }
